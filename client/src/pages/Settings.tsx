@@ -203,6 +203,7 @@ export default function Settings() {
                   type="submit" 
                   disabled={changePasswordMutation.isPending}
                   data-testid="button-change-password"
+                  className="border-0"
                 >
                   {changePasswordMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

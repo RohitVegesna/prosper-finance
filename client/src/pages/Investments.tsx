@@ -99,7 +99,7 @@ export default function Investments() {
             <h1 className="text-3xl font-display font-bold">Investment Portfolio</h1>
             <p className="text-muted-foreground mt-1">Track your investment performance and gains.</p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shadow-lg shadow-primary/20" data-testid="button-add-investment">
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shadow-lg shadow-primary/20 border-0" data-testid="button-add-investment">
             <Plus className="w-4 h-4" />
             Add Investment
           </Button>
@@ -226,7 +226,7 @@ export default function Investments() {
             </div>
             <h3 className="text-xl font-bold mb-2">No investments yet</h3>
             <p className="text-muted-foreground mb-6">Start tracking your assets today.</p>
-            <Button onClick={() => setIsCreateOpen(true)} variant="outline">
+            <Button onClick={() => setIsCreateOpen(true)} variant="outline" className="border-0">
               Add Investment
             </Button>
           </div>
@@ -590,7 +590,7 @@ function InvestmentDialog({ open, onOpenChange, investment }: { open: boolean, o
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isPending} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+            <Button type="submit" disabled={isPending} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-0">
               {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {investment ? "Update Investment" : "Add Investment"}
             </Button>

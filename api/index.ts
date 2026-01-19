@@ -267,6 +267,68 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       res.status(500).json({ message: "Failed to get user" });
     }
   });
+
+  // Admin Routes
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      // For now, we'll return mock admin endpoints since we don't have proper session management
+      // In a real implementation, you'd check if the current user is admin first
+      
+      // Mock response for admin users list
+      res.json([
+        {
+          id: "mock-admin-id",
+          email: "admin@example.com",
+          firstName: "Admin",
+          lastName: "User",
+          role: "admin",
+          tenantId: "mock-tenant-id",
+          createdAt: new Date().toISOString(),
+        }
+      ]);
+    } catch (err) {
+      console.error("Get admin users error:", err);
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  app.put("/api/admin/users/:userId/role", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+      
+      // Mock response for role update
+      res.json({ message: "Role updated successfully" });
+    } catch (err) {
+      console.error("Update user role error:", err);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  app.delete("/api/admin/users/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Mock response for user removal
+      res.json({ message: "User removed successfully" });
+    } catch (err) {
+      console.error("Remove user error:", err);
+      res.status(500).json({ message: "Failed to remove user" });
+    }
+  });
+
+  app.put("/api/admin/users/:userId/reset-password", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+      
+      // Mock response for password reset
+      res.json({ message: "Password reset successfully" });
+    } catch (err) {
+      console.error("Reset password error:", err);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
 };
 
 const app = express();

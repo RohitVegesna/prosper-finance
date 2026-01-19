@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Shield, User, Trash2, Crown, UserCog, KeyRound } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -47,11 +48,16 @@ import type { User as UserType } from "@shared/schema";
 export default function AccessManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isLoading: authLoading } = useAuth();
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
+  // Check if user is admin
+  const isAdmin = user?.role === 'admin';
+
   const { data: users, isLoading, error } = useQuery<UserType[]>({
     queryKey: ["/api/admin/users"],
+    enabled: isAdmin, // Only fetch if user is admin
   });
 
   const updateRoleMutation = useMutation({
@@ -115,6 +121,28 @@ export default function AccessManagement() {
     },
   });
 
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <Shield className="w-16 h-16 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">You need admin privileges to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
+
   if (isLoading) {
     return (
       <Layout>
@@ -130,8 +158,8 @@ export default function AccessManagement() {
       <Layout>
         <div className="flex flex-col items-center justify-center h-96 gap-4">
           <Shield className="w-16 h-16 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Access Denied</h2>
-          <p className="text-muted-foreground">You need admin privileges to view this page.</p>
+          <h2 className="text-xl font-semibold">Error Loading Users</h2>
+          <p className="text-muted-foreground">Failed to load user management data.</p>
         </div>
       </Layout>
     );

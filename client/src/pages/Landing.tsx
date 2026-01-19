@@ -18,7 +18,7 @@ export default function Landing() {
                 <Button variant="ghost" data-testid="button-login">Sign In</Button>
               </Link>
               <Link href="/register">
-                <Button data-testid="button-register">Get Started</Button>
+                <Button data-testid="button-register" className="border-0">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -38,7 +38,7 @@ export default function Landing() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/register">
-                <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-lg shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" data-testid="button-hero-register">
+                <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-lg shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all border-0" data-testid="button-hero-register">
                   Get Started
                 </Button>
               </Link>

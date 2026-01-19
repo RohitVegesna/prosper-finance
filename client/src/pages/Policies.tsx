@@ -141,7 +141,7 @@ export default function Policies() {
             <h1 className="text-3xl font-display font-bold">Insurance Policies</h1>
             <p className="text-muted-foreground mt-1">Manage and track your insurance coverage.</p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shadow-lg shadow-primary/20" data-testid="button-add-policy">
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 shadow-lg shadow-primary/20 border-0" data-testid="button-add-policy">
             <Plus className="w-4 h-4" />
             Add Policy
           </Button>
@@ -237,7 +237,7 @@ export default function Policies() {
             </div>
             <h3 className="text-xl font-bold mb-2">No policies yet</h3>
             <p className="text-muted-foreground mb-6">Start by adding your first insurance policy.</p>
-            <Button onClick={() => setIsCreateOpen(true)} variant="outline">
+            <Button onClick={() => setIsCreateOpen(true)} variant="outline" className="border-0">
               Add Policy
             </Button>
           </div>
@@ -680,7 +680,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isPending} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+            <Button type="submit" disabled={isPending} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-0">
               {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {policy ? "Update Policy" : "Create Policy"}
             </Button>
