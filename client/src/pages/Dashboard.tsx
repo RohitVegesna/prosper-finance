@@ -122,6 +122,8 @@ export default function Dashboard() {
             Financial Analytics
           </h2>
           
+          {/* Debug: Force production rebuild */}
+          
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Investment Distribution */}
             <motion.div
