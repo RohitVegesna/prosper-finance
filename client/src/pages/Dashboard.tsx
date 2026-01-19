@@ -146,7 +146,7 @@ export default function Dashboard() {
                             <span className="text-sm font-medium">{item.type}</span>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-bold">{item.value.toLocaleString()} kr</div>
+                            <div className="text-sm font-bold">kr {item.value.toLocaleString()}</div>
                             <div className="text-xs text-muted-foreground">{item.count} investment{item.count !== 1 ? 's' : ''}</div>
                           </div>
                         </div>
@@ -154,7 +154,10 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32 text-muted-foreground">
-                      No investment data available
+                      <div className="text-center">
+                        <div className="text-sm">No investment type data</div>
+                        <div className="text-xs mt-1">Add investments to see breakdown</div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -184,7 +187,7 @@ export default function Dashboard() {
                             <span className="text-sm font-medium">{item.platform}</span>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-bold">{item.value.toLocaleString()} kr</div>
+                            <div className="text-sm font-bold">kr {item.value.toLocaleString()}</div>
                             <div className="text-xs text-muted-foreground">{item.count} investment{item.count !== 1 ? 's' : ''}</div>
                           </div>
                         </div>
@@ -192,7 +195,10 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32 text-muted-foreground">
-                      No platform data available
+                      <div className="text-center">
+                        <div className="text-sm">No platform data available</div>
+                        <div className="text-xs mt-1">Add investments to see platforms</div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -216,15 +222,15 @@ export default function Dashboard() {
                   {analytics?.premiumsByProvider && analytics.premiumsByProvider.length > 0 ? (
                     <div className="space-y-3">
                       {analytics.premiumsByProvider.map((item, index) => {
-                        // Fallback to SEK if currency is missing (for backwards compatibility)
+                        // Handle production data format (no currency field) and development format (with currency)
                         const currency = item.currency || 'SEK';
                         const currencySymbol = currency === 'INR' ? '₹' : 
                                              currency === 'SEK' ? 'kr' : 
                                              currency === 'USD' ? '$' : 
-                                             currency === 'EUR' ? '€' : currency;
-                        const yearlyAmount = currency === 'SEK' ? 
-                          `${item.yearlyPremium.toLocaleString()} kr` : 
-                          `${currencySymbol}${item.yearlyPremium.toLocaleString()}`;
+                                             currency === 'EUR' ? '€' : 'kr'; // Default to kr
+                        
+                        // Format the yearly amount - handle both with/without currency
+                        const yearlyAmount = `${currencySymbol}${item.yearlyPremium.toLocaleString()}`;
                         
                         return (
                           <div key={`${item.provider}-${index}`} className="flex justify-between items-center">
@@ -242,7 +248,10 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32 text-muted-foreground">
-                      No policy data available
+                      <div className="text-center">
+                        <div className="text-sm">No premium data available</div>
+                        <div className="text-xs mt-1">Add policies to see premium breakdown</div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
