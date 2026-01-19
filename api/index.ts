@@ -214,6 +214,66 @@ class DatabaseStorage {
 // Initialize storage
 const storage = new DatabaseStorage();
 
+// === MULTER CONFIGURATION ===
+
+// Configure multer for file uploads
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const hasVercelBlobToken = !!process.env.BLOB_READ_WRITE_TOKEN;
+const useVercelBlob = isProduction || hasVercelBlobToken; // Use Vercel Blob if in production OR if token is available
+
+let upload: multer.Multer;
+
+if (useVercelBlob) {
+  // Production or development with Vercel Blob token: Use memory storage for Vercel Blob
+  upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
+      if (allowedTypes.test(path.extname(file.originalname))) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'));
+      }
+    }
+  });
+} else {
+  // Development without Vercel Blob token: Use disk storage
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  upload = multer({ 
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => {
+        const tenantId = (req as any).session?.user?.tenantId || 'default';
+        const tenantDir = path.join(uploadsDir, tenantId);
+        if (!fs.existsSync(tenantDir)) {
+          fs.mkdirSync(tenantDir, { recursive: true });
+        }
+        cb(null, tenantDir);
+      },
+      filename: (req, file, cb) => {
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 12);
+        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        cb(null, `${timestamp}_${randomId}_${sanitizedFileName}`);
+      }
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
+      if (allowedTypes.test(path.extname(file.originalname))) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'));
+      }
+    }
+  });
+}
+
 // === AUTH ROUTES ===
 
 // Helper function to sanitize date fields (convert empty strings to undefined)
@@ -922,67 +982,6 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       res.status(500).json({ message: "Failed to get dashboard stats" });
     }
   });
-
-  // Configure multer for file uploads
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-  const hasVercelBlobToken = !!process.env.BLOB_READ_WRITE_TOKEN;
-  const useVercelBlob = isProduction || hasVercelBlobToken; // Use Vercel Blob if in production OR if token is available
-  
-  let upload: multer.Multer;
-  
-  if (useVercelBlob) {
-    // Production or development with Vercel Blob token: Use memory storage for Vercel Blob
-    upload = multer({ 
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-      fileFilter: (req, file, cb) => {
-        const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
-        if (allowedTypes.test(path.extname(file.originalname))) {
-          cb(null, true);
-        } else {
-          cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'));
-        }
-      }
-    });
-  } else {
-    // Development without Vercel Blob token: Use disk storage
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    upload = multer({ 
-      storage: multer.diskStorage({
-        destination: function (req, file, cb) {
-          const tenantId = req.session?.user?.tenantId || 'default';
-          const tenantDir = path.join(uploadsDir, tenantId);
-          
-          if (!fs.existsSync(tenantDir)) {
-            fs.mkdirSync(tenantDir, { recursive: true });
-          }
-          
-          cb(null, tenantDir);
-        },
-        filename: function (req, file, cb) {
-          const timestamp = Date.now();
-          const ext = path.extname(file.originalname);
-          const baseName = path.basename(file.originalname, ext);
-          const fileName = `${timestamp}-${baseName}${ext}`;
-          cb(null, fileName);
-        }
-      }),
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-      fileFilter: (req, file, cb) => {
-        const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
-        if (allowedTypes.test(path.extname(file.originalname))) {
-          cb(null, true);
-        } else {
-          cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'));
-        }
-      }
-    });
-  }
 
   // Upload endpoints (simplified for demo)
   app.post("/api/uploads/request-url", async (req, res) => {
