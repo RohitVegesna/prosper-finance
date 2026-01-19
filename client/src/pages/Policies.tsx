@@ -443,7 +443,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
       policyType: "Health",
       country: "SE",
       startDate: format(new Date(), "yyyy-MM-dd"),
-      maturityDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), "yyyy-MM-dd"),
+      maturityDate: "", // Leave empty by default since it's optional
       nextRenewalDate: "",
       lastPremiumDate: "",
       premium: "",
@@ -597,8 +597,9 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
               <Input type="date" id="startDate" {...form.register("startDate")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="maturityDate">Maturity Date</Label>
+              <Label htmlFor="maturityDate">Maturity Date <span className="text-gray-500 font-normal">(optional)</span></Label>
               <Input type="date" id="maturityDate" {...form.register("maturityDate")} />
+              <p className="text-xs text-gray-500">Leave empty for policies without maturity dates (e.g., health insurance)</p>
             </div>
           </div>
 

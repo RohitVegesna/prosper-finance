@@ -92,7 +92,9 @@ export const investmentsRelations = relations(investments, ({ one }) => ({
 // === BASE SCHEMAS ===
 
 export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true, createdAt: true });
-export const insertPolicySchema = createInsertSchema(policies).omit({ id: true, createdAt: true, renewalStatus: true });
+export const insertPolicySchema = createInsertSchema(policies).omit({ id: true, createdAt: true, renewalStatus: true }).extend({
+  maturityDate: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
+});
 export const insertInvestmentSchema = createInsertSchema(investments).omit({ id: true, createdAt: true }).extend({
   shares: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
   purchaseDate: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
