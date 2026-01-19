@@ -621,6 +621,70 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       res.status(500).json({ message: "Failed to delete investment" });
     }
   });
+
+  // Dashboard stats endpoint
+  app.get("/api/dashboard/stats", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const tenantId = req.session.user.tenantId!;
+      
+      // Get all policies and investments for the tenant
+      const policies = await storage.getPoliciesByTenant(tenantId);
+      const investments = await storage.getInvestmentsByTenant(tenantId);
+
+      // Calculate policy metrics
+      const totalPolicies = policies.length;
+      let expiringSoon = 0; // 30-60 days
+      let needsRenewal = 0; // < 30 days or expired
+      
+      const now = new Date();
+      
+      policies.forEach(policy => {
+        if (policy.maturityDate) {
+          const maturityDate = new Date(policy.maturityDate);
+          const daysToMaturity = Math.ceil((maturityDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysToMaturity < 0) {
+            needsRenewal++; // Already expired
+          } else if (daysToMaturity <= 30) {
+            needsRenewal++; // Expiring within 30 days
+          } else if (daysToMaturity <= 60) {
+            expiringSoon++; // Expiring within 31-60 days
+          }
+        }
+      });
+
+      // Calculate investment metrics
+      const totalInvestments = investments.length;
+      
+      const investmentsByCurrency = {
+        SEK: 0,
+        INR: 0
+      };
+      
+      investments.forEach(investment => {
+        if (investment.currency === 'SEK') {
+          investmentsByCurrency.SEK += parseFloat(investment.currentValue || '0');
+        } else if (investment.currency === 'INR') {
+          investmentsByCurrency.INR += parseFloat(investment.currentValue || '0');
+        }
+      });
+
+      res.json({
+        totalPolicies,
+        expiringSoon,
+        needsRenewal,
+        totalInvestments,
+        investmentsByCurrency
+      });
+    } catch (err) {
+      console.error("Dashboard stats error:", err);
+      res.status(500).json({ message: "Failed to get dashboard stats" });
+    }
+  });
 };
 
 const app = express();
