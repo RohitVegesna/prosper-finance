@@ -21,6 +21,14 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   Plus, 
   Search, 
@@ -59,19 +67,39 @@ type PolicyFormValues = z.infer<typeof formSchema>;
 
 export default function Policies() {
   const [search, setSearch] = useState("");
-  const { data: policies, isLoading } = usePolicies(search);
+  const [policyTypeFilter, setPolicyTypeFilter] = useState("all");
+  const [beneficiaryTypeFilter, setBeneficiaryTypeFilter] = useState("all");
+  const { data: allPolicies, isLoading } = usePolicies();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<any>(null);
+
+  // Client-side filtering
+  const policies = allPolicies?.filter(policy => {
+    // Text search filter
+    const matchesSearch = !search || (
+      policy.policyName?.toLowerCase().includes(search.toLowerCase()) ||
+      policy.policyNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      policy.provider?.toLowerCase().includes(search.toLowerCase()) ||
+      policy.nominee?.toLowerCase().includes(search.toLowerCase()) ||
+      policy.paidTo?.toLowerCase().includes(search.toLowerCase()) ||
+      policy.country?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    // Policy type filter
+    const matchesPolicyType = policyTypeFilter === "all" || policy.policyType === policyTypeFilter;
+    
+    // Beneficiary type filter
+    const matchesBeneficiaryType = beneficiaryTypeFilter === "all" || policy.beneficiaryType === beneficiaryTypeFilter;
+
+    return matchesSearch && matchesPolicyType && matchesBeneficiaryType;
+  });
 
   // Calculate stats from policies
   const stats = {
     total: policies?.length || 0,
-    active: policies?.filter(p => differenceInDays(parseISO(p.expiryDate), new Date()) > 60).length || 0,
-    expiringSoon: policies?.filter(p => {
-      const days = differenceInDays(parseISO(p.expiryDate), new Date());
-      return days > 0 && days <= 60;
-    }).length || 0,
-    expired: policies?.filter(p => differenceInDays(parseISO(p.expiryDate), new Date()) < 0).length || 0,
+    active: policies?.filter(p => p.maturityDate && differenceInDays(parseISO(p.maturityDate), new Date()) > 60).length || 0,
+    renewals: policies?.filter(p => p.nextRenewalDate && differenceInDays(parseISO(p.nextRenewalDate), new Date()) <= 30 && differenceInDays(parseISO(p.nextRenewalDate), new Date()) > 0).length || 0,
+    matured: policies?.filter(p => p.maturityDate && differenceInDays(parseISO(p.maturityDate), new Date()) < 0).length || 0,
   };
 
   const overviewCards = [
@@ -90,18 +118,18 @@ export default function Policies() {
       bg: "bg-green-500/10",
     },
     {
-      title: "Expiring Soon",
-      value: stats.expiringSoon,
+      title: "Renewals Due",
+      value: stats.renewals,
       icon: Clock,
       color: "text-orange-500",
       bg: "bg-orange-500/10",
     },
     {
-      title: "Expired",
-      value: stats.expired,
+      title: "Matured",
+      value: stats.matured,
       icon: AlertTriangle,
-      color: "text-red-500",
-      bg: "bg-red-500/10",
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
     },
   ];
 
@@ -149,12 +177,57 @@ export default function Policies() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          
+          <div className="flex items-center gap-3">
+            <Select value={policyTypeFilter} onValueChange={setPolicyTypeFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Policy Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Health">Health</SelectItem>
+                <SelectItem value="Life">Life</SelectItem>
+                <SelectItem value="Vehicle">Vehicle</SelectItem>
+                <SelectItem value="Property">Property</SelectItem>
+                <SelectItem value="Travel">Travel</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={beneficiaryTypeFilter} onValueChange={setBeneficiaryTypeFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Beneficiary" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Beneficiaries</SelectItem>
+                <SelectItem value="FAMILY">Family</SelectItem>
+                <SelectItem value="PARENTS">Parents</SelectItem>
+                <SelectItem value="SPOUSE">Spouse</SelectItem>
+                <SelectItem value="CHILDREN">Children</SelectItem>
+                <SelectItem value="OTHER">Other</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {(search || policyTypeFilter !== "all" || beneficiaryTypeFilter !== "all") && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setSearch("");
+                  setPolicyTypeFilter("all");
+                  setBeneficiaryTypeFilter("all");
+                }}
+                className="px-3"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-muted/50 rounded-2xl animate-pulse" />
+              <div key={i} className="h-16 bg-muted/30 rounded-lg animate-pulse" />
             ))}
           </div>
         ) : policies?.length === 0 ? (
@@ -169,14 +242,29 @@ export default function Policies() {
             </Button>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {policies?.map((policy) => (
-              <PolicyCard 
-                key={policy.id} 
-                policy={policy} 
-                onEdit={() => setEditingPolicy(policy)}
-              />
-            ))}
+          <div className="bg-card rounded-xl shadow-soft border-0 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="font-semibold">Policy Details</TableHead>
+                  <TableHead className="font-semibold">Type & Provider</TableHead>
+                  <TableHead className="font-semibold">Premium</TableHead>
+                  <TableHead className="font-semibold">Dates</TableHead>
+                  <TableHead className="font-semibold">Beneficiary</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {policies?.map((policy) => (
+                  <PolicyTableRow 
+                    key={policy.id} 
+                    policy={policy} 
+                    onEdit={() => setEditingPolicy(policy)}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 
@@ -197,83 +285,147 @@ export default function Policies() {
   );
 }
 
-function PolicyCard({ policy, onEdit }: { policy: any, onEdit: () => void }) {
+function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void }) {
   const deleteMutation = useDeletePolicy();
-  const daysToExpiry = differenceInDays(parseISO(policy.expiryDate), new Date());
+  const daysToMaturity = policy.maturityDate ? differenceInDays(parseISO(policy.maturityDate), new Date()) : null;
   
   let statusColor = "bg-green-500/10 text-green-700 border-green-200";
   let statusText = "Active";
 
-  if (daysToExpiry < 0) {
-    statusColor = "bg-red-500/10 text-red-700 border-red-200";
-    statusText = "Expired";
-  } else if (daysToExpiry <= 30) {
-    statusColor = "bg-red-500/10 text-red-700 border-red-200";
-    statusText = `Expiring in ${daysToExpiry} days`;
-  } else if (daysToExpiry <= 60) {
-    statusColor = "bg-orange-500/10 text-orange-700 border-orange-200";
-    statusText = `Expiring in ${daysToExpiry} days`;
+  if (daysToMaturity !== null) {
+    if (daysToMaturity < 0) {
+      statusColor = "bg-red-500/10 text-red-700 border-red-200";
+      statusText = "Matured";
+    } else if (daysToMaturity <= 30) {
+      statusColor = "bg-red-500/10 text-red-700 border-red-200";
+      statusText = `Maturing in ${daysToMaturity} days`;
+    } else if (daysToMaturity <= 60) {
+      statusColor = "bg-orange-500/10 text-orange-700 border-orange-200";
+      statusText = `Maturing in ${daysToMaturity} days`;
+    }
   }
 
   return (
-    <Card className="shadow-soft hover-elevate transition-all duration-300 border-0 bg-card group">
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <Badge variant="outline" className="mb-2 bg-background">{policy.policyType}</Badge>
-            <h3 className="text-lg font-bold font-display leading-tight">{policy.policyName}</h3>
-            <p className="text-sm text-muted-foreground">{policy.provider}</p>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => {
-                  if (confirm("Are you sure you want to delete this policy?")) {
-                    deleteMutation.mutate(policy.id);
-                  }
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColor} mb-6`}>
-          {daysToExpiry <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
-          {statusText}
-        </div>
-
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center text-muted-foreground">
-            <Calendar className="w-4 h-4 mr-2 opacity-70" />
-            <span>Expires: <span className="text-foreground font-medium">{format(parseISO(policy.expiryDate), "MMM d, yyyy")}</span></span>
-          </div>
+    <TableRow className="group hover:bg-muted/30 transition-colors">
+      {/* Policy Details */}
+      <TableCell className="py-4">
+        <div className="space-y-1">
+          <div className="font-semibold text-sm">{policy.policyName}</div>
+          {policy.policyNumber && (
+            <div className="text-xs text-muted-foreground">#{policy.policyNumber}</div>
+          )}
           {policy.documentUrl && (
             <a 
               href={`/objects/${policy.documentUrl}`} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center text-primary hover:underline"
+              className="inline-flex items-center text-xs text-primary hover:underline"
             >
-              <FileText className="w-4 h-4 mr-2" />
-              View Document
+              <FileText className="w-3 h-3 mr-1" />
+              Document
             </a>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </TableCell>
+
+      {/* Type & Provider */}
+      <TableCell className="py-4">
+        <div className="space-y-1">
+          <Badge variant="outline" className="text-xs">{policy.policyType}</Badge>
+          <div className="text-sm text-muted-foreground">{policy.provider}</div>
+        </div>
+      </TableCell>
+
+      {/* Premium */}
+      <TableCell className="py-4">
+        {policy.premium ? (
+          <div className="space-y-1">
+            <div className="font-semibold text-sm">
+              {policy.premiumCurrency === 'INR' ? '₹' : ''}{Number(policy.premium).toLocaleString()}{policy.premiumCurrency === 'SEK' ? ' kr' : ''}
+            </div>
+            {policy.premiumFrequency && (
+              <div className="text-xs text-muted-foreground">/{policy.premiumFrequency}</div>
+            )}
+            <div className="text-xs text-muted-foreground">{policy.country}</div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <span className="text-muted-foreground text-sm">—</span>
+            <div className="text-xs text-muted-foreground">{policy.country}</div>
+          </div>
+        )}
+      </TableCell>
+
+      {/* Dates */}
+      <TableCell className="py-4">
+        <div className="space-y-1 text-xs">
+          {policy.startDate && (
+            <div><span className="text-muted-foreground">Start:</span> {format(parseISO(policy.startDate), "MMM d, yyyy")}</div>
+          )}
+          {policy.nextRenewalDate && (
+            <div><span className="text-muted-foreground">Renewal:</span> {format(parseISO(policy.nextRenewalDate), "MMM d, yyyy")}</div>
+          )}
+          {policy.maturityDate && (
+            <div><span className="text-muted-foreground">Maturity:</span> {format(parseISO(policy.maturityDate), "MMM d, yyyy")}</div>
+          )}
+        </div>
+      </TableCell>
+
+      {/* Beneficiary */}
+      <TableCell className="py-4">
+        <div className="space-y-1">
+          {policy.paidTo && (
+            <div className="text-sm">Paid to: {policy.paidTo}</div>
+          )}
+          {policy.nominee && (
+            <div className="text-sm">Nominee: {policy.nominee}</div>
+          )}
+          <div className="flex items-center gap-2">
+            {policy.beneficiaryType && (
+              <Badge variant="secondary" className="text-xs">
+                {policy.beneficiaryType}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </TableCell>
+
+      {/* Status */}
+      <TableCell className="py-4">
+        <Badge variant="outline" className={`${statusColor} text-xs`}>
+          {daysToMaturity !== null && daysToMaturity <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
+          {statusText}
+        </Badge>
+      </TableCell>
+
+      {/* Actions */}
+      <TableCell className="py-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this policy?")) {
+                  deleteMutation.mutate(policy.id);
+                }
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -287,10 +439,19 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
     defaultValues: policy || {
       provider: "",
       policyName: "",
+      policyNumber: "",
       policyType: "Health",
       country: "SE",
       startDate: format(new Date(), "yyyy-MM-dd"),
-      expiryDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), "yyyy-MM-dd"),
+      maturityDate: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), "yyyy-MM-dd"),
+      nextRenewalDate: "",
+      lastPremiumDate: "",
+      premium: "",
+      premiumCurrency: "SEK",
+      premiumFrequency: "yearly",
+      nominee: "",
+      beneficiaryType: "FAMILY",
+      paidTo: "",
       notes: "",
       tenantId: "1", // TODO: Get from auth context or implicit
     }
@@ -329,6 +490,11 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
             {form.formState.errors.policyName && <p className="text-red-500 text-xs">{form.formState.errors.policyName.message}</p>}
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="policyNumber">Policy Number</Label>
+            <Input id="policyNumber" placeholder="e.g. POL-123456789" {...form.register("policyNumber")} />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="provider">Provider</Label>
@@ -354,14 +520,96 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
             </div>
           </div>
 
+          {/* Premium Information */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="premium">Premium Amount</Label>
+              <Input id="premium" type="number" placeholder="10000" {...form.register("premium")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="premiumCurrency">Currency</Label>
+              <Select 
+                onValueChange={(val) => form.setValue("premiumCurrency", val)} 
+                defaultValue={form.getValues("premiumCurrency")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SEK">SEK (kr)</SelectItem>
+                  <SelectItem value="INR">INR (₹)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="premiumFrequency">Frequency</Label>
+              <Select 
+                onValueChange={(val) => form.setValue("premiumFrequency", val)} 
+                defaultValue={form.getValues("premiumFrequency")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="half-yearly">Half-yearly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Beneficiary Information */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="nominee">Nominee</Label>
+              <Input id="nominee" placeholder="e.g. John Doe" {...form.register("nominee")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="beneficiaryType">Beneficiary Type</Label>
+              <Select 
+                onValueChange={(val) => form.setValue("beneficiaryType", val)} 
+                defaultValue={form.getValues("beneficiaryType")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select beneficiary type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FAMILY">Family</SelectItem>
+                  <SelectItem value="PARENTS">Parents</SelectItem>
+                  <SelectItem value="SPOUSE">Spouse</SelectItem>
+                  <SelectItem value="CHILDREN">Children</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="paidTo">Paid To</Label>
+            <Input id="paidTo" placeholder="e.g. Policy holder, Nominee, Bank account details" {...form.register("paidTo")} />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date</Label>
               <Input type="date" id="startDate" {...form.register("startDate")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="expiryDate">Maturity Date</Label>
-              <Input type="date" id="expiryDate" {...form.register("expiryDate")} />
+              <Label htmlFor="maturityDate">Maturity Date</Label>
+              <Input type="date" id="maturityDate" {...form.register("maturityDate")} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="nextRenewalDate">Next Renewal Date</Label>
+              <Input type="date" id="nextRenewalDate" {...form.register("nextRenewalDate")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastPremiumDate">Last Premium Date</Label>
+              <Input type="date" id="lastPremiumDate" {...form.register("lastPremiumDate")} />
             </div>
           </div>
 

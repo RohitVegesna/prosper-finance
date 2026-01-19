@@ -55,7 +55,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="p-2 bg-primary rounded-xl">
               <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-sidebar-foreground">FinGuard</span>
+            <span className="text-sidebar-foreground">Prosper</span>
           </div>
         </div>
         
@@ -116,7 +116,7 @@ export function Layout({ children }: LayoutProps) {
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border">
           <div className="flex items-center gap-2 font-display text-xl font-bold text-primary">
             <ShieldCheck className="w-6 h-6" />
-            <span>FinGuard</span>
+            <span>Prosper</span>
           </div>
           
           <Sheet>

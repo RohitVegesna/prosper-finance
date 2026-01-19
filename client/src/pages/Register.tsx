@@ -51,7 +51,7 @@ export default function Register() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
         title: "Account created",
-        description: "Welcome to FinGuard!",
+        description: "Welcome to Prosper!",
       });
       setLocation("/");
     },
@@ -75,7 +75,7 @@ export default function Register() {
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2 text-primary">
               <ShieldCheck className="w-8 h-8" />
-              <span className="text-2xl font-bold">FinGuard</span>
+              <span className="text-2xl font-bold">Prosper</span>
             </div>
           </div>
           <CardTitle>Create your account</CardTitle>

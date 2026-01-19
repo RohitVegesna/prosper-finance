@@ -26,10 +26,19 @@ export const policies = pgTable("policies", {
   tenantId: varchar("tenant_id").notNull(), // Link to tenant
   provider: text("provider").notNull(),
   policyName: text("policy_name").notNull(),
+  policyNumber: text("policy_number"), // New field
   policyType: text("policy_type").notNull(), // Health, Life, Vehicle, etc.
   country: text("country").notNull(),
-  startDate: date("start_date").notNull(),
-  expiryDate: date("expiry_date").notNull(),
+  startDate: date("start_date").notNull(), // Already exists
+  maturityDate: date("maturity_date"), // Using maturity instead of expiry
+  nextRenewalDate: date("next_renewal_date"), // New field
+  lastPremiumDate: date("last_premium_date"), // New field
+  premium: numeric("premium"), // New field
+  premiumCurrency: text("premium_currency").default("SEK"), // New field - SEK or INR
+  premiumFrequency: text("premium_frequency"), // New field - monthly, quarterly, yearly, etc.
+  nominee: text("nominee"), // New field
+  beneficiaryType: text("beneficiary_type"), // New field - FAMILY, PARENTS as badge
+  paidTo: text("paid_to"), // New field - who the policy amount is paid to
   renewalStatus: text("renewal_status").default("active"), // active, expired, expiring_soon
   notes: text("notes"),
   documentUrl: text("document_url"), // URL from object storage
@@ -41,9 +50,13 @@ export const investments = pgTable("investments", {
   tenantId: varchar("tenant_id").notNull(), // Link to tenant
   type: text("type").notNull(), // Stocks, Mutual Funds, ETFs, Crypto
   platform: text("platform").notNull(), // Broker/Platform
-  country: text("country").notNull(),
+  country: text("country").notNull().default("SWEDEN"), // SWEDEN or INDIA
   currency: text("currency").notNull().default("SEK"), // SEK or INR
-  amount: numeric("amount").notNull(),
+  initialAmount: numeric("initial_amount").notNull(), // Original investment amount
+  currentValue: numeric("current_value").notNull(), // Current market value
+  shares: numeric("shares"), // Number of shares/units (optional)
+  purchaseDate: date("purchase_date"), // When the investment was made
+  lastUpdated: timestamp("last_updated").defaultNow(), // When values were last updated
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -80,7 +93,11 @@ export const investmentsRelations = relations(investments, ({ one }) => ({
 
 export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true, createdAt: true });
 export const insertPolicySchema = createInsertSchema(policies).omit({ id: true, createdAt: true, renewalStatus: true });
-export const insertInvestmentSchema = createInsertSchema(investments).omit({ id: true, createdAt: true });
+export const insertInvestmentSchema = createInsertSchema(investments).omit({ id: true, createdAt: true }).extend({
+  shares: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
+  purchaseDate: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
+  lastUpdated: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
+});
 
 // === EXPLICIT API CONTRACT TYPES ===
 

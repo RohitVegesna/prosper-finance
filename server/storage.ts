@@ -181,9 +181,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateInvestment(id: number, tenantId: string, updates: UpdateInvestmentRequest): Promise<Investment> {
+    // Automatically set lastUpdated when updating investment
+    const updatesWithTimestamp = {
+      ...updates,
+      lastUpdated: new Date()
+    };
+    
     const [updated] = await db
       .update(investments)
-      .set(updates)
+      .set(updatesWithTimestamp)
       .where(and(eq(investments.id, id), eq(investments.tenantId, tenantId)))
       .returning();
     return updated;
@@ -207,8 +213,8 @@ export class DatabaseStorage implements IStorage {
     };
   }> {
     const now = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(now.getDate() + 30);
+    const sixtyDaysFromNow = new Date();
+    sixtyDaysFromNow.setDate(now.getDate() + 60);
 
     const policiesList = await this.getPolicies(tenantId);
     
@@ -216,11 +222,20 @@ export class DatabaseStorage implements IStorage {
     let needsRenewal = 0;
 
     for (const p of policiesList) {
-      const expiry = new Date(p.expiryDate);
-      if (expiry < now) {
-        needsRenewal++;
-      } else if (expiry <= thirtyDaysFromNow) {
-        expiringSoon++;
+      // Check renewal dates (next renewal date within 60 days)
+      if (p.nextRenewalDate) {
+        const renewal = new Date(p.nextRenewalDate);
+        if (renewal <= sixtyDaysFromNow) {
+          needsRenewal++;
+        }
+      }
+      
+      // Check maturity dates (policies maturing within 60 days)
+      if (p.maturityDate) {
+        const maturity = new Date(p.maturityDate);
+        if (maturity <= sixtyDaysFromNow && maturity > now) {
+          expiringSoon++;
+        }
       }
     }
 
@@ -229,8 +244,8 @@ export class DatabaseStorage implements IStorage {
     
     // Calculate totals by currency
     const investmentsByCurrency = {
-      SEK: investmentsList.filter(inv => inv.currency === 'SEK').reduce((sum, inv) => sum + Number(inv.amount), 0),
-      INR: investmentsList.filter(inv => inv.currency === 'INR').reduce((sum, inv) => sum + Number(inv.amount), 0),
+      SEK: investmentsList.filter(inv => inv.currency === 'SEK').reduce((sum, inv) => sum + Number(inv.currentValue), 0),
+      INR: investmentsList.filter(inv => inv.currency === 'INR').reduce((sum, inv) => sum + Number(inv.currentValue), 0),
     };
 
     return {
