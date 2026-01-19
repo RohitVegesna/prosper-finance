@@ -7,6 +7,8 @@ import { relations, sql, eq, and, desc } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 
 const { Pool } = pg;
 
@@ -96,7 +98,7 @@ const schema = {
 
 // === TYPES ===
 export type UpsertUser = typeof users.$inferInsert;
-export type User = typeof users.$inferSelect;
+export type User = typeof users.$inferSelect & { domain?: string };
 export type Tenant = typeof tenants.$inferSelect;
 export type Policy = typeof policies.$inferSelect;
 export type Investment = typeof investments.$inferSelect;
@@ -208,6 +210,18 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         role: isFirstUser ? 'admin' : 'user',
       });
 
+      // Store user in session
+      req.session.userId = user.id;
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        tenantId: user.tenantId,
+        domain: tenant.domain,
+      };
+
       res.status(201).json({ 
         id: user.id, 
         email: user.email, 
@@ -244,6 +258,18 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       // Get user's tenant for domain info
       const tenant = await storage.getTenant(user.tenantId!);
 
+      // Store user in session
+      req.session.userId = user.id;
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        tenantId: user.tenantId,
+        domain: tenant?.domain || null,
+      };
+
       res.json({
         id: user.id,
         email: user.email,
@@ -262,11 +288,26 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     }
   });
 
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        res.status(500).json({ message: "Failed to logout" });
+      } else {
+        res.clearCookie('connect.sid'); // Clear the session cookie
+        res.json({ message: "Logged out successfully" });
+      }
+    });
+  });
+
   app.get("/api/auth/user", async (req, res) => {
     try {
-      // For now, return unauthorized since we don't have session management
-      // This would need proper session/JWT implementation
-      res.status(401).json({ message: "Unauthorized" });
+      // Check if user is logged in via session
+      if (req.session.user) {
+        res.json(req.session.user);
+      } else {
+        res.status(401).json({ message: "Unauthorized" });
+      }
     } catch (err) {
       console.error("Get user error:", err);
       res.status(500).json({ message: "Failed to get user" });
@@ -338,11 +379,48 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
 
 const app = express();
 
+// Extend session data interface
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+    user?: {
+      id: string;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      role?: string;
+      tenantId?: string;
+      domain?: string;
+    };
+  }
+}
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
   }
 }
+
+// Session configuration
+// Configure PostgreSQL session store
+const PgSession = connectPgSimple(session);
+const pgPool = new Pool({ connectionString: process.env.NEON_DATABASE_URL });
+
+app.use(session({
+  store: new PgSession({
+    pool: pgPool,
+    tableName: 'sessions',
+    createTableIfMissing: false // Table already exists
+  }),
+  secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
 
 app.use(
   express.json({

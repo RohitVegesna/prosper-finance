@@ -125,7 +125,7 @@ export default function Settings() {
               <div>
                 <Label className="text-muted-foreground">Domain</Label>
                 <p className="font-medium" data-testid="text-user-domain">
-                  {(user as any)?.domain || 'Not set'}
+                  {user?.domain || 'Not set'}
                 </p>
               </div>
             </CardContent>
