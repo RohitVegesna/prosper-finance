@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Modern minimal palette with depth */
+  --background: 220 14% 96%;
+  --foreground: 224 71% 4%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
+  --card-border: 220 13% 91%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --popover-border: 220 13% 91%;
+
+  /* Primary - Modern Indigo */
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --primary-border: 239 84% 67%;
+
+  /* Secondary - Soft gray */
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 220 9% 46%;
+  --secondary-border: 220 13% 91%;
+
+  /* Muted backgrounds */
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --muted-border: 220 13% 91%;
+
+  /* Accent - Vibrant Teal */
+  --accent: 172 66% 50%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: 172 66% 40%;
+
+  /* Destructive - Soft Red */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: 0 72% 41%;
+
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 239 84% 67%;
+
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar: 224 71% 4%;
+  --sidebar-foreground: 220 14% 96%;
+  --sidebar-border: 220 9% 15%;
+  --sidebar-ring: 239 84% 67%;
+  --sidebar-primary: 239 84% 67%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 9% 12%;
+  --sidebar-accent-foreground: 220 14% 96%;
+
+  /* Chart colors */
+  --chart-1: 239 84% 67%;
+  --chart-2: 172 66% 50%;
+  --chart-3: 43 96% 56%;
+  --chart-4: 0 72% 51%;
+  --chart-5: 280 68% 60%;
+}
+
+.dark {
+  --background: 224 71% 4%;
+  --foreground: 220 14% 96%;
+
+  --card: 220 9% 8%;
+  --card-foreground: 220 14% 96%;
+  --card-border: 220 9% 15%;
+
+  --popover: 220 9% 8%;
+  --popover-foreground: 220 14% 96%;
+  --popover-border: 220 9% 15%;
+
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --primary-border: 239 84% 67%;
+
+  --secondary: 220 9% 12%;
+  --secondary-foreground: 220 14% 80%;
+  --secondary-border: 220 9% 20%;
+
+  --muted: 220 9% 12%;
+  --muted-foreground: 220 9% 56%;
+  --muted-border: 220 9% 20%;
+
+  --accent: 172 66% 50%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: 172 66% 40%;
+
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: 0 62% 40%;
+
+  --border: 220 9% 15%;
+  --input: 220 9% 15%;
+  --ring: 239 84% 67%;
+
+  --sidebar: 220 9% 6%;
+  --sidebar-foreground: 220 14% 96%;
+  --sidebar-border: 220 9% 12%;
+  --sidebar-ring: 239 84% 67%;
+  --sidebar-primary: 239 84% 67%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 9% 12%;
+  --sidebar-accent-foreground: 220 14% 96%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight text-foreground;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/40;
+}
+
+/* Animation utilities */
+.animate-in {
+  animation: animateIn 0.3s ease-out forwards;
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

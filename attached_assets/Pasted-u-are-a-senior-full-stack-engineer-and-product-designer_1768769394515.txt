@@ -1,0 +1,70 @@
+u are a senior full-stack engineer and product designer.
+Build a modern, secure, multi-tenant personal finance web application using Replit as the dev environment and Neon (PostgreSQL) as the database.
+Core Vision
+This is a personal finance & legacy information system that a user can maintain during their life and eventually pass on to dependents. The app must support multiple customers (tenants) separated by domain or subdomain, so friends can use the same platform independently.
+
+Tech Stack (Required)
+* Frontend: React + TypeScript
+* Styling: Tailwind CSS
+* UI components: modern card-based layout, grid views, subtle animations
+* Backend: Node.js (Express or similar)
+* Database: Neon PostgreSQL
+* Auth: Secure login system
+* File storage: store uploaded policy documents (PDFs, images) and allow download
+* ORM: Prisma or similar (recommended)
+
+Authentication & Roles
+* Master Admin Account
+    * Can create tenants (customers)
+    * Can assign domains or subdomains
+    * Can invite users
+    * Can control access permissions
+* Tenant Users
+    * Only see their own data
+    * Login tied to domain or tenant ID
+    * Future-ready for dependents / read-only access
+
+Multi-Tenancy Requirements
+* Each domain/subdomain = one tenant
+* Database schema must support tenant isolation:
+    * tenant_id on all major tables
+* Auth must resolve tenant from domain
+* One Neon database, logically separated per tenant
+
+Pages & Features
+1. Dashboard (Home Page)
+At the top:
+* Metric cards
+    * Total active insurance policies
+    * Policies expiring in 30 / 60 / 90 days
+    * Policies needing renewal
+    * Total investments (summary)
+Below:
+* Quick links to Insurance and Investments pages
+
+2. Insurance Management Page
+Display insurance policies in a data grid / table with:
+* Insurance Provider
+* Policy Name
+* Policy Type
+* Country where policy is valid
+* Policy Start Date
+* Policy Expiry Date
+* Renewal Status (auto-calculated)
+* Notes
+* Policy Document Upload
+    * Upload PDF/image
+    * Store file reference in DB
+    * Download button in last column
+Features:
+* Sorting
+* Filtering
+* Expiry highlighting (color-coded)
+* Add / Edit / Delete policy
+
+3. Investments Page
+Store and manage investment information:
+* Investment Type (Stocks, Mutual Funds, ETFs, Crypto, etc.)
+* Platform / Broker
+* Country
+* Amount Invested
