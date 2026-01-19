@@ -1003,29 +1003,44 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       console.log('Raw policies:', JSON.stringify(policies, null, 2));
       console.log('Raw investments:', JSON.stringify(investments, null, 2));
 
-      // Simple test response
-      const testResponse = {
-        investmentsByType: investments.map(inv => ({
-          type: inv.type,
-          value: parseFloat(inv.currentValue || '0'),
-          count: 1
-        })),
-        investmentsByPlatform: investments.map(inv => ({
-          platform: inv.platform,
-          value: parseFloat(inv.currentValue || '0'),
-          count: 1
-        })),
-        premiumsByProvider: policies.map(pol => ({
-          provider: pol.provider,
-          monthlyPremium: parseFloat(pol.premium || '0'),
-          yearlyPremium: parseFloat(pol.premium || '0'),
-          policyCount: 1
-        })),
-        upcomingRenewals: []
+      // Analytics: Investments by Type
+      const investmentsByType = investments.map(inv => ({
+        type: inv.type || 'Unknown',
+        value: parseFloat(inv.currentValue || '0'),
+        count: 1
+      }));
+
+      // Analytics: Investments by Platform
+      const investmentsByPlatform = investments.map(inv => ({
+        platform: inv.platform || 'Unknown',
+        value: parseFloat(inv.currentValue || '0'),
+        count: 1
+      }));
+
+      // Analytics: Premiums by Provider
+      const premiumsByProvider = policies.map(pol => {
+        console.log('Mapping policy:', pol.provider, 'currency:', pol.premiumCurrency);
+        return {
+          provider: pol.provider || 'Unknown',
+          monthlyPremium: parseFloat(pol.premium || '0') / (pol.premiumFrequency === 'yearly' ? 12 : 1),
+          yearlyPremium: parseFloat(pol.premium || '0') * (pol.premiumFrequency === 'yearly' ? 1 : 12),
+          policyCount: 1,
+          currency: pol.premiumCurrency || 'SEK'
+        };
+      });
+
+      // Analytics: Upcoming Renewals (simplified for now)
+      const upcomingRenewals = [];
+
+      const analyticsData = {
+        investmentsByType,
+        investmentsByPlatform,
+        premiumsByProvider,
+        upcomingRenewals
       };
       
-      console.log('Sending response:', JSON.stringify(testResponse, null, 2));
-      res.json(testResponse);
+      console.log('Sending response:', JSON.stringify(analyticsData, null, 2));
+      res.json(analyticsData);
     } catch (err) {
       console.error("Dashboard analytics error:", err);
       res.status(500).json({ message: "Failed to get dashboard analytics" });
