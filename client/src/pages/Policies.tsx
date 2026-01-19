@@ -475,8 +475,30 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
     }
   });
 
+  // Helper function to extract filename from Vercel Storage URL
+  const extractFilenameFromUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    
+    // Extract the original filename from Vercel storage URL
+    // URL format: https://domain/documents/uuid/timestamp_hash/originalFileName
+    const urlParts = url.split('/');
+    const lastPart = urlParts[urlParts.length - 1];
+    
+    // If the last part contains the original filename after the last underscore and dash
+    // Format: "199306274946_-_Inkomstdeklaration_1_2022.pdf"
+    const match = lastPart.match(/_-_(.+)$/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    // Fallback: return the last part of the URL
+    return lastPart;
+  };
+
   // Handle document upload
-  const [documentPath, setDocumentPath] = useState<string | null>(policy?.documentUrl || null);
+  const [documentPath, setDocumentPath] = useState<string | null>(
+    policy?.documentUrl ? extractFilenameFromUrl(policy.documentUrl) : null
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const onSubmit = (data: PolicyFormValues) => {
@@ -821,15 +843,18 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
                 {documentPath && (
                   <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-50 py-2 px-3 rounded-md">
                     <FileText className="w-4 h-4" />
-                    <span>Selected: {documentPath}</span>
+                    <span>
+                      {selectedFile ? 'New file selected: ' : 'Current file: '}
+                      {documentPath}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
-            {policy?.documentUrl && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+            {policy?.documentUrl && !selectedFile && (
+              <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 py-2 px-3 rounded-md">
                 <FileText className="w-4 h-4" />
-                <span>Current document attached</span>
+                <span>Upload a new file to replace the current document</span>
               </div>
             )}
           </div>
