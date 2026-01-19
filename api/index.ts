@@ -924,13 +924,29 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     if (!documentUrl) return;
     
     try {
-      // If it's a Vercel Blob URL (contains vercel-storage.com or starts with https://), delete from blob storage
-      if (documentUrl.includes('vercel-storage.com') || documentUrl.startsWith('https://')) {
-        console.log(`Attempting to delete blob file: ${documentUrl}`);
+      // If it's a full Vercel Blob URL (starts with https://), delete directly
+      if (documentUrl.startsWith('https://') && documentUrl.includes('vercel-storage.com')) {
+        console.log(`Attempting to delete Vercel Blob URL: ${documentUrl}`);
         await del(documentUrl);
         console.log(`Successfully deleted blob file: ${documentUrl}`);
-      } else {
-        // If it's a local file path, delete from local storage
+      } 
+      // If it's an old format path (like documents/tenant/file.pdf), convert to blob path and try to delete
+      else if (documentUrl.startsWith('documents/')) {
+        // Try to construct the actual blob path that might exist
+        // Extract filename from old format
+        const filename = documentUrl.split('/').pop();
+        if (filename) {
+          // The file might be in the blob storage with a different path structure
+          // We need to check if there's a policy ID we can extract or use a pattern
+          console.log(`Attempting to delete old format path: ${documentUrl}, filename: ${filename}`);
+          
+          // For old paths, we can't reliably reconstruct the blob path, so we'll skip deletion
+          // This is mainly for cleanup of legacy data
+          console.log(`Skipping deletion of old format path: ${documentUrl} - cannot reconstruct blob path`);
+        }
+      }
+      // If it's a local file path, delete from local storage  
+      else {
         const filePath = path.join(process.cwd(), documentUrl);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
@@ -956,25 +972,12 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      // Get policy ID from request body (sent by the frontend)
-      const policyId = req.body.policyId || 'general';
-      console.log(`Uploading file for policy ID: ${policyId}`);
+      // Generate unique identifier for this file upload
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 12);
+      const uniqueFileId = `${timestamp}_${randomId}`;
       
-      // If replacing an existing document, delete the old one first
-      if (policyId !== 'new' && policyId !== 'general') {
-        try {
-          const existingPolicies = await db.select().from(policies).where(
-            and(eq(policies.id, parseInt(policyId)), eq(policies.tenantId, req.session.user.tenantId))
-          );
-          
-          if (existingPolicies.length > 0 && existingPolicies[0].documentUrl) {
-            await deleteBlobFile(existingPolicies[0].documentUrl);
-          }
-        } catch (error) {
-          console.error("Error deleting old document:", error);
-          // Continue with upload even if old file deletion fails
-        }
-      }
+      console.log(`Uploading file with unique ID: ${uniqueFileId}`);
       
       // Use original filename, but sanitize it
       const sanitizedFileName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -983,15 +986,16 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       let filePath: string;
       
       if (useVercelBlob) {
-        // Upload to Vercel Blob with policy-based structure
+        // Upload to Vercel Blob with unique file identifiers
         try {
-          const blobPath = `documents/${req.session.user.tenantId}/${policyId}/${fileName}`;
+          const blobPath = `documents/${req.session.user.tenantId}/${uniqueFileId}/${fileName}`;
           console.log(`Uploading to Vercel Blob path: ${blobPath}`);
           const blob = await put(blobPath, req.file.buffer, {
             access: 'public',
             contentType: req.file.mimetype
           });
           
+          // Store the full Vercel Blob URL in the database
           filePath = blob.url;
           console.log(`File uploaded to Vercel Blob: ${filePath}`);
         } catch (error) {
@@ -999,16 +1003,16 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
           return res.status(500).json({ message: "Failed to upload to cloud storage" });
         }
       } else {
-        // Development: Save to local disk with policy-based structure
+        // Development: Save to local disk with unique file identifiers
         const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId);
-        const policyDir = path.join(tenantDir, policyId.toString());
+        const fileDir = path.join(tenantDir, uniqueFileId);
         
-        // Create policy directory if it doesn't exist
-        if (!fs.existsSync(policyDir)) {
-          fs.mkdirSync(policyDir, { recursive: true });
+        // Create file directory if it doesn't exist
+        if (!fs.existsSync(fileDir)) {
+          fs.mkdirSync(fileDir, { recursive: true });
         }
         
-        const localFilePath = path.join(policyDir, fileName);
+        const localFilePath = path.join(fileDir, fileName);
         fs.writeFileSync(localFilePath, req.file.buffer);
         
         const relativePath = path.relative(process.cwd(), localFilePath);
@@ -1021,7 +1025,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         path: filePath,
         message: "File uploaded successfully",
         filename: fileName,
-        policyId: policyId,
+        uniqueFileId: uniqueFileId, // Include the unique file identifier
         size: req.file.size,
         originalName: req.file.originalname
       });
