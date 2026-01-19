@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "../server/routes";
+import { registerSimpleAuthRoutes } from "../server/simple-auth";
 
 const app = express();
 
@@ -55,14 +56,41 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add a simple health check route
+app.get("/api/health", (req: Request, res: Response) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    hasDb: !!process.env.NEON_DATABASE_URL
+  });
+});
+
 // Initialize routes
 let routesInitialized = false;
 
 const initializeRoutes = async () => {
   if (!routesInitialized) {
-    // For serverless, we don't need the HTTP server parameter
-    await registerRoutes(null as any, app);
-    routesInitialized = true;
+    try {
+      console.log("Initializing routes...");
+      
+      // First try simple auth routes for testing
+      await registerSimpleAuthRoutes(app);
+      
+      // Then try full routes (this might fail due to session store)
+      try {
+        await registerRoutes(null as any, app);
+        console.log("Full routes initialized successfully");
+      } catch (error) {
+        console.warn("Full routes failed, using simple auth only:", error.message);
+      }
+      
+      routesInitialized = true;
+      console.log("Routes initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize routes:", error);
+      throw error;
+    }
   }
 };
 
@@ -72,7 +100,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
     next();
   } catch (error) {
     console.error("Error initializing routes:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 });
 
