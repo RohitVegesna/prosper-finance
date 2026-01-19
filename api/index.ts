@@ -1,5 +1,27 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes, registerSimpleAuthRoutes } from "./server-utils";
+// Import everything directly to avoid module resolution issues in Vercel
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
+import * as schema from "../shared/schema";
+import { DatabaseStorage } from "../server/storage";
+import { registerSimpleAuthRoutes } from "../server/simple-auth";
+
+const { Pool } = pg;
+
+// Database setup
+const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error(
+    "DATABASE_URL or NEON_DATABASE_URL must be set. Did you forget to provision a database?",
+  );
+}
+
+const pool = new Pool({ connectionString });
+const db = drizzle(pool, { schema });
+
+// Initialize storage
+const storage = new DatabaseStorage();
 
 const app = express();
 
@@ -73,16 +95,8 @@ const initializeRoutes = async () => {
     try {
       console.log("Initializing routes...");
       
-      // First try simple auth routes for testing
+      // Use simple auth routes for serverless environment
       await registerSimpleAuthRoutes(app);
-      
-      // Then try full routes (this might fail due to session store)
-      try {
-        await registerRoutes(null as any, app);
-        console.log("Full routes initialized successfully");
-      } catch (error) {
-        console.warn("Full routes failed, using simple auth only:", error instanceof Error ? error.message : String(error));
-      }
       
       routesInitialized = true;
       console.log("Routes initialized successfully");
