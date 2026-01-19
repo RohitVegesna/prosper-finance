@@ -135,3 +135,9 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
 export type PolicyResponse = z.infer<typeof api.policies.create.responses[201]>;
 export type InvestmentResponse = z.infer<typeof api.investments.create.responses[201]>;
 export type DashboardStatsResponse = z.infer<typeof api.dashboard.stats.responses[200]>;
+
+// Add input types for the hooks
+export type CreatePolicyRequest = z.infer<typeof api.policies.create.input>;
+export type UpdatePolicyRequest = z.infer<typeof api.policies.update.input>;
+export type CreateInvestmentRequest = z.infer<typeof api.investments.create.input>;
+export type UpdateInvestmentRequest = z.infer<typeof api.investments.update.input>;
