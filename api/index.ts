@@ -227,7 +227,7 @@ if (useVercelBlob) {
   // Production or development with Vercel Blob token: Use memory storage for Vercel Blob
   upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
     fileFilter: (req, file, cb) => {
       const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
       if (allowedTypes.test(path.extname(file.originalname))) {
@@ -262,7 +262,7 @@ if (useVercelBlob) {
         cb(null, `${timestamp}_${randomId}_${sanitizedFileName}`);
       }
     }),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
     fileFilter: (req, file, cb) => {
       const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
       if (allowedTypes.test(path.extname(file.originalname))) {
