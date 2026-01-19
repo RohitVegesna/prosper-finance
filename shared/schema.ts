@@ -93,7 +93,10 @@ export const investmentsRelations = relations(investments, ({ one }) => ({
 
 export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true, createdAt: true });
 export const insertPolicySchema = createInsertSchema(policies).omit({ id: true, createdAt: true, renewalStatus: true }).extend({
+  startDate: z.string().min(1, "Start date is required").transform((val) => val && val.trim() !== "" ? val : undefined),
   maturityDate: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
+  nextRenewalDate: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
+  lastPremiumDate: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),
 });
 export const insertInvestmentSchema = createInsertSchema(investments).omit({ id: true, createdAt: true }).extend({
   shares: z.string().optional().transform((val) => val && val.trim() !== "" ? val : undefined),

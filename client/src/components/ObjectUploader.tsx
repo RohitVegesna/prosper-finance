@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
+  policyId?: number | string; // Add policy ID prop
   onComplete?: (
     result: UploadResult<Record<string, unknown>, Record<string, unknown>>
   ) => void;
@@ -25,6 +26,7 @@ interface ObjectUploaderProps {
 export function ObjectUploader({
   maxNumberOfFiles = 1,
   maxFileSize = 10485760, // 10MB default
+  policyId,
   onComplete,
   buttonClassName,
   children,
@@ -62,6 +64,12 @@ export function ObjectUploader({
               uploadURL: `uploads/${Date.now()}`
             };
           }
+        }
+      })
+      .on("upload", () => {
+        // Add policy ID as form data for each upload
+        if (policyId) {
+          uppy.setMeta({ policyId: policyId });
         }
       })
       .on("complete", (result) => {

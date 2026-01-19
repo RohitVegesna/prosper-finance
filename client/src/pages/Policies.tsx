@@ -636,6 +636,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
             <Label>Document</Label>
             <div className="flex items-center gap-4">
               <ObjectUploader
+                policyId={policy?.id || 'new'}
                 onComplete={(result) => {
                   if (result.successful && result.successful.length > 0) {
                      // Get the object path from the first successful upload

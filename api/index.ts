@@ -890,17 +890,22 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const timestamp = Date.now();
-      const ext = path.extname(req.file.originalname);
-      const baseName = path.basename(req.file.originalname, ext);
-      const fileName = `${timestamp}-${baseName}${ext}`;
+      // Get policy ID from request body (sent by the frontend)
+      const policyId = req.body.policyId || 'general';
+      console.log(`Uploading file for policy ID: ${policyId}`);
+      
+      // Use original filename, but sanitize it
+      const sanitizedFileName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = sanitizedFileName;
       
       let filePath: string;
       
       if (useVercelBlob) {
-        // Upload to Vercel Blob (production or dev with token)
+        // Upload to Vercel Blob with policy-based structure
         try {
-          const blob = await put(`documents/${req.session.user.tenantId}/${fileName}`, req.file.buffer, {
+          const blobPath = `documents/${req.session.user.tenantId}/${policyId}/${fileName}`;
+          console.log(`Uploading to Vercel Blob path: ${blobPath}`);
+          const blob = await put(blobPath, req.file.buffer, {
             access: 'public',
             contentType: req.file.mimetype
           });
@@ -912,9 +917,19 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
           return res.status(500).json({ message: "Failed to upload to cloud storage" });
         }
       } else {
-        // Development: File already saved to disk by multer
-        filePath = req.file.path;
-        const relativePath = path.relative(process.cwd(), filePath);
+        // Development: Save to local disk with policy-based structure
+        const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId);
+        const policyDir = path.join(tenantDir, policyId.toString());
+        
+        // Create policy directory if it doesn't exist
+        if (!fs.existsSync(policyDir)) {
+          fs.mkdirSync(policyDir, { recursive: true });
+        }
+        
+        const localFilePath = path.join(policyDir, fileName);
+        fs.writeFileSync(localFilePath, req.file.buffer);
+        
+        const relativePath = path.relative(process.cwd(), localFilePath);
         filePath = relativePath.replace(/\\/g, '/'); // Normalize path separators for web
         console.log(`File saved locally: ${filePath}`);
       }
@@ -924,6 +939,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         path: filePath,
         message: "File uploaded successfully",
         filename: fileName,
+        policyId: policyId,
         size: req.file.size,
         originalName: req.file.originalname
       });
