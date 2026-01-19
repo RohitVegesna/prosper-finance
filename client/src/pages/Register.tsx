@@ -47,8 +47,9 @@ export default function Register() {
       const res = await apiRequest("POST", "/api/auth/register", registerData);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: (userData) => {
+      // Set user data directly in cache instead of invalidating
+      queryClient.setQueryData(["/api/auth/user"], userData);
       toast({
         title: "Account created",
         description: "Welcome to Prosper!",

@@ -36,8 +36,9 @@ export default function Login() {
       const res = await apiRequest("POST", "/api/auth/login", data);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: (userData) => {
+      // Set user data directly in cache instead of invalidating
+      queryClient.setQueryData(["/api/auth/user"], userData);
       setLocation("/");
     },
     onError: (error: Error) => {

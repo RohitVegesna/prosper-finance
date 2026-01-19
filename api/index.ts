@@ -256,6 +256,17 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       res.status(500).json({ message: "Login failed", error: err instanceof Error ? err.message : String(err) });
     }
   });
+
+  app.get("/api/auth/user", async (req, res) => {
+    try {
+      // For now, return unauthorized since we don't have session management
+      // This would need proper session/JWT implementation
+      res.status(401).json({ message: "Unauthorized" });
+    } catch (err) {
+      console.error("Get user error:", err);
+      res.status(500).json({ message: "Failed to get user" });
+    }
+  });
 };
 
 const app = express();
