@@ -1,13 +1,14 @@
-import { useDashboardStats } from "@/hooks/use-dashboard";
+import { useDashboardStats, useDashboardAnalytics } from "@/hooks/use-dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/Layout";
-import { Shield, AlertTriangle, TrendingUp, Loader2 } from "lucide-react";
+import { Shield, AlertTriangle, TrendingUp, Loader2, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: analytics, isLoading: analyticsLoading } = useDashboardAnalytics();
 
-  if (isLoading) {
+  if (statsLoading || analyticsLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-96">
@@ -110,6 +111,178 @@ export default function Dashboard() {
                   ₹{(stats?.investmentsByCurrency?.INR || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Enhanced Analytics Section */}
+        <div>
+          <h2 className="text-xl font-display font-bold mb-6 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            Financial Analytics
+          </h2>
+          
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Investment Distribution */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.5 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    Investment Distribution by Type
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics?.investmentsByType && analytics.investmentsByType.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.investmentsByType.map((item, index) => (
+                        <div key={item.type} className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-primary rounded-full"></div>
+                            <span className="text-sm font-medium">{item.type}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold">{item.value.toLocaleString()} kr</div>
+                            <div className="text-xs text-muted-foreground">{item.count} investment{item.count !== 1 ? 's' : ''}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground">
+                      No investment data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Investment Platforms */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.6 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Investment Platforms
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics?.investmentsByPlatform && analytics.investmentsByPlatform.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.investmentsByPlatform.map((item, index) => (
+                        <div key={item.platform} className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                            <span className="text-sm font-medium">{item.platform}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold">{item.value.toLocaleString()} kr</div>
+                            <div className="text-xs text-muted-foreground">{item.count} investment{item.count !== 1 ? 's' : ''}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground">
+                      No platform data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Premium Costs */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.7 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    Premium Costs by Provider
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics?.premiumsByProvider && analytics.premiumsByProvider.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.premiumsByProvider.map((item, index) => {
+                        const currencySymbol = item.currency === 'INR' ? '₹' : 
+                                             item.currency === 'SEK' ? 'kr' : 
+                                             item.currency === 'USD' ? '$' : 
+                                             item.currency === 'EUR' ? '€' : item.currency;
+                        const yearlyAmount = item.currency === 'SEK' ? 
+                          `${item.yearlyPremium.toLocaleString()} kr` : 
+                          `${currencySymbol}${item.yearlyPremium.toLocaleString()}`;
+                        
+                        return (
+                          <div key={item.provider} className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                              <span className="text-sm font-medium">{item.provider}</span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold">{yearlyAmount}/year</div>
+                              <div className="text-xs text-muted-foreground">{item.policyCount} polic{item.policyCount !== 1 ? 'ies' : 'y'}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground">
+                      No policy data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Upcoming Renewals */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.8 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    Upcoming Renewals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics?.upcomingRenewals && analytics.upcomingRenewals.length > 0 ? (
+                    <div className="space-y-3">
+                      {analytics.upcomingRenewals.filter(item => item.count > 0).map((item, index) => (
+                        <div key={item.date} className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                            <span className="text-sm font-medium">{item.date}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold">{item.count} renewal{item.count !== 1 ? 's' : ''}</div>
+                            <div className="text-xs text-muted-foreground">{item.totalPremium.toLocaleString()} kr</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-32 text-muted-foreground">
+                      No upcoming renewals
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </motion.div>
           </div>
         </div>

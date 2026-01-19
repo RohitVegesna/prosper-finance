@@ -38,6 +38,7 @@ export function useCreateInvestment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.investments.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.dashboard.stats.path] });
+      queryClient.invalidateQueries({ queryKey: [api.dashboard.analytics.path] });
       toast({
         title: "Success",
         description: "Investment recorded successfully",
@@ -75,6 +76,7 @@ export function useUpdateInvestment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.investments.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.dashboard.stats.path] });
+      queryClient.invalidateQueries({ queryKey: [api.dashboard.analytics.path] });
       toast({
         title: "Success",
         description: "Investment updated successfully",
@@ -109,6 +111,7 @@ export function useDeleteInvestment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.investments.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.dashboard.stats.path] });
+      queryClient.invalidateQueries({ queryKey: [api.dashboard.analytics.path] });
       toast({
         title: "Success",
         description: "Investment deleted successfully",

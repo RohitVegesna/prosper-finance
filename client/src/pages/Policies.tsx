@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { usePolicies, useCreatePolicy, useUpdatePolicy, useDeletePolicy } from "@/hooks/use-policies";
+import { api } from "@shared/routes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,13 +56,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPolicySchema } from "@shared/schema";
 import { z } from "zod";
-import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
 
-// Extend the schema for the form
-const formSchema = insertPolicySchema.extend({
-  // Convert strings to dates/numbers if needed, though input type="date" returns string
-});
+// Use the API input schema which already excludes tenantId
+const formSchema = api.policies.create.input;
 
 type PolicyFormValues = z.infer<typeof formSchema>;
 
@@ -437,15 +435,33 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
   const { toast } = useToast();
   
   const form = useForm<PolicyFormValues>({
-    resolver: zodResolver(insertPolicySchema),
-    defaultValues: policy || {
+    resolver: zodResolver(formSchema),
+    mode: "onSubmit", // Only validate when form is submitted
+    defaultValues: policy ? {
+      provider: policy.provider || "",
+      policyName: policy.policyName || "",
+      policyNumber: policy.policyNumber || "",
+      policyType: policy.policyType || "Health",
+      country: policy.country || "SE",
+      startDate: policy.startDate || format(new Date(), "yyyy-MM-dd"),
+      maturityDate: policy.maturityDate || "",
+      nextRenewalDate: policy.nextRenewalDate || "",
+      lastPremiumDate: policy.lastPremiumDate || "",
+      premium: policy.premium || "",
+      premiumCurrency: policy.premiumCurrency || "SEK",
+      premiumFrequency: policy.premiumFrequency || "yearly",
+      nominee: policy.nominee || "",
+      beneficiaryType: policy.beneficiaryType || "SINGLE",
+      paidTo: policy.paidTo || "",
+      notes: policy.notes || "",
+    } : {
       provider: "",
       policyName: "",
       policyNumber: "",
       policyType: "Health",
       country: "SE",
       startDate: format(new Date(), "yyyy-MM-dd"),
-      maturityDate: "", // Leave empty by default since it's optional
+      maturityDate: "",
       nextRenewalDate: "",
       lastPremiumDate: "",
       premium: "",
@@ -455,7 +471,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
       beneficiaryType: "SINGLE",
       paidTo: "",
       notes: "",
-      tenantId: "1", // TODO: Get from auth context or implicit
+      // Note: tenantId is not included - it's handled server-side
     }
   });
 
@@ -464,28 +480,118 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const onSubmit = (data: PolicyFormValues) => {
-    const formData = new FormData();
+    console.log("Raw form data:", data);
     
-    // Add all form fields to FormData
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        formData.append(key, value.toString());
-      }
-    });
+    // Clean up empty date fields before processing
+    const cleanedData = {
+      ...data,
+      maturityDate: data.maturityDate?.trim() === '' ? undefined : data.maturityDate,
+      nextRenewalDate: data.nextRenewalDate?.trim() === '' ? undefined : data.nextRenewalDate,
+      lastPremiumDate: data.lastPremiumDate?.trim() === '' ? undefined : data.lastPremiumDate,
+      policyNumber: data.policyNumber?.trim() === '' ? undefined : data.policyNumber,
+      premium: data.premium?.trim() === '' ? undefined : data.premium,
+      nominee: data.nominee?.trim() === '' ? undefined : data.nominee,
+      paidTo: data.paidTo?.trim() === '' ? undefined : data.paidTo,
+      notes: data.notes?.trim() === '' ? undefined : data.notes,
+    };
     
-    // Add file if selected
+    console.log("Cleaned form data:", cleanedData);
+    console.log("Selected file:", selectedFile);
+    
     if (selectedFile) {
+      console.log("Creating FormData with file");
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add all form fields to FormData
+      Object.entries(cleanedData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Add file
       formData.append('document', selectedFile);
-    }
-    
-    if (policy) {
-      updateMutation.mutate({ id: policy.id, formData }, {
-        onSuccess: () => onOpenChange(false)
-      });
+      
+      if (policy) {
+        updateMutation.mutate({ id: policy.id, formData }, {
+          onSuccess: () => {
+            form.reset();
+            setSelectedFile(null);
+            setDocumentPath(null);
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            console.error("Update error:", error);
+          }
+        });
+      } else {
+        createMutation.mutate(formData, {
+          onSuccess: () => {
+            form.reset();
+            setSelectedFile(null);
+            setDocumentPath(null);
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            console.error("Create error:", error);
+          }
+        });
+      }
     } else {
-      createMutation.mutate(formData, {
-        onSuccess: () => onOpenChange(false)
-      });
+      console.log("Creating JSON data without file");
+      // No file, send as JSON - use cleaned data
+      const submissionData: CreatePolicyRequest = {
+        provider: cleanedData.provider,
+        policyName: cleanedData.policyName,
+        policyNumber: cleanedData.policyNumber,
+        policyType: cleanedData.policyType,
+        country: cleanedData.country,
+        startDate: cleanedData.startDate,
+        maturityDate: cleanedData.maturityDate,
+        nextRenewalDate: cleanedData.nextRenewalDate,
+        lastPremiumDate: cleanedData.lastPremiumDate,
+        premium: cleanedData.premium,
+        premiumCurrency: cleanedData.premiumCurrency || "SEK",
+        premiumFrequency: cleanedData.premiumFrequency || "yearly",
+        nominee: cleanedData.nominee,
+        beneficiaryType: cleanedData.beneficiaryType || "SINGLE",
+        paidTo: cleanedData.paidTo,
+        notes: cleanedData.notes,
+        documentUrl: policy?.documentUrl, // Keep existing document URL for updates
+      };
+
+      // Remove undefined values to avoid validation issues
+      const finalData = Object.entries(submissionData).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key as keyof CreatePolicyRequest] = value;
+        }
+        return acc;
+      }, {} as Partial<CreatePolicyRequest>);
+      
+      console.log("Final data to submit:", finalData);
+      
+      if (policy) {
+        updateMutation.mutate({ id: policy.id, ...finalData }, {
+          onSuccess: () => {
+            form.reset();
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            console.error("Update error:", error);
+          }
+        });
+      } else {
+        createMutation.mutate(finalData as CreatePolicyRequest, {
+          onSuccess: () => {
+            form.reset();
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            console.error("Create error:", error);
+          }
+        });
+      }
     }
   };
 
@@ -498,22 +604,43 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
           <DialogTitle>{policy ? "Edit Policy" : "Add New Policy"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <form 
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log("Form validation errors:", errors);
+            const errorMessages = Object.entries(errors)
+              .map(([field, error]) => `${field}: ${error?.message}`)
+              .join(', ');
+            toast({
+              title: "Validation Error", 
+              description: errorMessages || "Please check the form fields and try again.",
+              variant: "destructive"
+            });
+          })}
+          className="space-y-4 py-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="policyName">Policy Name</Label>
             <Input id="policyName" placeholder="e.g. Family Health Plan" {...form.register("policyName")} />
-            {form.formState.errors.policyName && <p className="text-red-500 text-xs">{form.formState.errors.policyName.message}</p>}
+            {form.formState.errors.policyName && (
+              <p className="text-red-500 text-xs">{form.formState.errors.policyName.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="policyNumber">Policy Number</Label>
             <Input id="policyNumber" placeholder="e.g. POL-123456789" {...form.register("policyNumber")} />
+            {form.formState.errors.policyNumber && (
+              <p className="text-red-500 text-xs">{form.formState.errors.policyNumber.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="provider">Provider</Label>
               <Input id="provider" placeholder="e.g. Allianz" {...form.register("provider")} />
+              {form.formState.errors.provider && (
+                <p className="text-red-500 text-xs">{form.formState.errors.provider.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="policyType">Type</Label>
@@ -615,18 +742,33 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
             <div className="space-y-2">
               <Label htmlFor="maturityDate">Maturity Date <span className="text-gray-500 font-normal">(optional)</span></Label>
               <Input type="date" id="maturityDate" {...form.register("maturityDate")} />
-              <p className="text-xs text-gray-500">Leave empty for policies without maturity dates (e.g., health insurance)</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nextRenewalDate">Next Renewal Date</Label>
-              <Input type="date" id="nextRenewalDate" {...form.register("nextRenewalDate")} />
+              <Input 
+                type="date" 
+                id="nextRenewalDate" 
+                {...form.register("nextRenewalDate")}
+                placeholder=""
+              />
+              {form.formState.errors.nextRenewalDate && (
+                <p className="text-red-500 text-xs">{form.formState.errors.nextRenewalDate.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastPremiumDate">Last Premium Date</Label>
-              <Input type="date" id="lastPremiumDate" {...form.register("lastPremiumDate")} />
+              <Input 
+                type="date" 
+                id="lastPremiumDate" 
+                {...form.register("lastPremiumDate")}
+                placeholder=""
+              />
+              {form.formState.errors.lastPremiumDate && (
+                <p className="text-red-500 text-xs">{form.formState.errors.lastPremiumDate.message}</p>
+              )}
             </div>
           </div>
 
@@ -647,26 +789,49 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
           </div>
 
           <div className="space-y-2">
-            <Label>Document</Label>
-            <div className="flex items-center gap-4">
-              <Input
-                type="file"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  setSelectedFile(file || null);
-                  if (file) {
-                    toast({ title: "Document selected", description: file.name });
-                  }
-                }}
-                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              {(policy?.documentUrl || selectedFile) && (
-                <div className="text-sm text-gray-600">
-                  {selectedFile ? `Selected: ${selectedFile.name}` : 'Current document attached'}
+            <Label>Document Upload</Label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <div className="space-y-4">
+                <div className="mx-auto w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-blue-600" />
                 </div>
-              )}
+                <div>
+                  <label htmlFor="document-upload" className="cursor-pointer">
+                    <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                      Click to upload
+                    </span>
+                    <span className="text-sm text-gray-500"> or drag and drop</span>
+                  </label>
+                  <input
+                    id="document-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setDocumentPath(file.name);
+                        toast({ title: "Document selected", description: file.name });
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">PDF, DOC, DOCX, JPG, PNG up to 10MB</p>
+                {documentPath && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-green-600 bg-green-50 py-2 px-3 rounded-md">
+                    <FileText className="w-4 h-4" />
+                    <span>Selected: {documentPath}</span>
+                  </div>
+                )}
+              </div>
             </div>
+            {policy?.documentUrl && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FileText className="w-4 h-4" />
+                <span>Current document attached</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -676,7 +841,17 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isPending} className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-0">
+            <Button 
+              type="submit" 
+              disabled={isPending} 
+              className="bg-primary text-primary-foreground shadow-lg shadow-primary/25 border-0"
+              onClick={() => {
+                // Debug: Log form state when button is clicked
+                console.log("Form state:", form.formState);
+                console.log("Form values:", form.getValues());
+                console.log("Form errors:", form.formState.errors);
+              }}
+            >
               {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {policy ? "Update Policy" : "Create Policy"}
             </Button>

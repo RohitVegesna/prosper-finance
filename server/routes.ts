@@ -340,6 +340,70 @@ export async function registerRoutes(
     res.json(stats);
   });
 
+  // Dashboard analytics endpoint
+  app.get("/api/dashboard/analytics", async (req, res) => {
+    console.log('=== ANALYTICS ENDPOINT CALLED ===');
+    try {
+      if (!req.session.userId) {
+        console.log('No user session found');
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const tenantId = req.session.tenantId!;
+      console.log('Tenant ID:', tenantId);
+      
+      // Get all policies and investments for the tenant
+      const policies = await storage.getPolicies(tenantId);
+      const investments = await storage.getInvestments(tenantId);
+      
+      console.log('Found policies:', policies?.length || 0, 'investments:', investments?.length || 0);
+      console.log('Raw policies:', JSON.stringify(policies, null, 2));
+      console.log('Raw investments:', JSON.stringify(investments, null, 2));
+
+      // Analytics: Investments by Type
+      const investmentsByType = investments.map(inv => ({
+        type: inv.type || 'Unknown',
+        value: parseFloat(inv.currentValue || '0'),
+        count: 1
+      }));
+
+      // Analytics: Investments by Platform
+      const investmentsByPlatform = investments.map(inv => ({
+        platform: inv.platform || 'Unknown',
+        value: parseFloat(inv.currentValue || '0'),
+        count: 1
+      }));
+
+      // Analytics: Premiums by Provider
+      const premiumsByProvider = policies.map(pol => {
+        console.log('Mapping policy:', pol.provider, 'currency:', pol.premiumCurrency);
+        return {
+          provider: pol.provider || 'Unknown',
+          monthlyPremium: parseFloat(pol.premium || '0') / (pol.premiumFrequency === 'yearly' ? 12 : 1),
+          yearlyPremium: parseFloat(pol.premium || '0') * (pol.premiumFrequency === 'yearly' ? 1 : 12),
+          policyCount: 1,
+          currency: pol.premiumCurrency || 'SEK'
+        };
+      });
+
+      // Analytics: Upcoming Renewals (simplified for now)
+      const upcomingRenewals: any[] = [];
+
+      const analyticsData = {
+        investmentsByType,
+        investmentsByPlatform,
+        premiumsByProvider,
+        upcomingRenewals
+      };
+      
+      console.log('Sending response:', JSON.stringify(analyticsData, null, 2));
+      res.json(analyticsData);
+    } catch (err) {
+      console.error("Dashboard analytics error:", err);
+      res.status(500).json({ message: "Failed to get dashboard analytics" });
+    }
+  });
+
   // Admin: User Management
   const isAdmin: RequestHandler = async (req, res, next) => {
     const user = await storage.getUser(req.session.userId!);

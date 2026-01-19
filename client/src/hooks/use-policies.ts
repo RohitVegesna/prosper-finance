@@ -95,7 +95,7 @@ export function useUpdatePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.policies.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.dashboard.stats.path] });
+      queryClient.invalidateQueries({ queryKey: [api.dashboard.stats.path] });      queryClient.invalidateQueries({ queryKey: [api.dashboard.analytics.path] });      queryClient.invalidateQueries({ queryKey: [api.dashboard.analytics.path] });
       toast({
         title: "Success",
         description: "Policy updated successfully",
@@ -130,6 +130,7 @@ export function useDeletePolicy() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.policies.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.dashboard.stats.path] });
+      queryClient.invalidateQueries({ queryKey: [api.dashboard.analytics.path] });
       toast({
         title: "Success",
         description: "Policy deleted successfully",

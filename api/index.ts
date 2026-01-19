@@ -983,6 +983,55 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     }
   });
 
+  // Dashboard analytics endpoint
+  app.get("/api/dashboard/analytics", async (req, res) => {
+    console.log('=== ANALYTICS ENDPOINT CALLED ===');
+    try {
+      if (!req.session.user) {
+        console.log('No user session found');
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const tenantId = req.session.user.tenantId!;
+      console.log('Tenant ID:', tenantId);
+      
+      // Get all policies and investments for the tenant
+      const policies = await storage.getPoliciesByTenant(tenantId);
+      const investments = await storage.getInvestmentsByTenant(tenantId);
+      
+      console.log('Found policies:', policies?.length || 0, 'investments:', investments?.length || 0);
+      console.log('Raw policies:', JSON.stringify(policies, null, 2));
+      console.log('Raw investments:', JSON.stringify(investments, null, 2));
+
+      // Simple test response
+      const testResponse = {
+        investmentsByType: investments.map(inv => ({
+          type: inv.type,
+          value: parseFloat(inv.currentValue || '0'),
+          count: 1
+        })),
+        investmentsByPlatform: investments.map(inv => ({
+          platform: inv.platform,
+          value: parseFloat(inv.currentValue || '0'),
+          count: 1
+        })),
+        premiumsByProvider: policies.map(pol => ({
+          provider: pol.provider,
+          monthlyPremium: parseFloat(pol.premium || '0'),
+          yearlyPremium: parseFloat(pol.premium || '0'),
+          policyCount: 1
+        })),
+        upcomingRenewals: []
+      };
+      
+      console.log('Sending response:', JSON.stringify(testResponse, null, 2));
+      res.json(testResponse);
+    } catch (err) {
+      console.error("Dashboard analytics error:", err);
+      res.status(500).json({ message: "Failed to get dashboard analytics" });
+    }
+  });
+
   // Upload endpoints (simplified for demo)
   app.post("/api/uploads/request-url", async (req, res) => {
     try {

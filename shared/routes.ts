@@ -41,7 +41,7 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/policies',
-      input: insertPolicySchema,
+      input: insertPolicySchema.omit({ tenantId: true }), // Remove tenantId from API input
       responses: {
         201: z.custom<typeof policies.$inferSelect>(),
         400: errorSchemas.validation,
@@ -50,7 +50,7 @@ export const api = {
     update: {
       method: 'PUT' as const,
       path: '/api/policies/:id',
-      input: insertPolicySchema.partial(),
+      input: insertPolicySchema.omit({ tenantId: true }).partial(), // Remove tenantId from API input
       responses: {
         200: z.custom<typeof policies.$inferSelect>(),
         404: errorSchemas.notFound,
@@ -114,6 +114,36 @@ export const api = {
             SEK: z.number(),
             INR: z.number(),
           }),
+        }),
+      },
+    },
+    analytics: {
+      method: 'GET' as const,
+      path: '/api/dashboard/analytics',
+      responses: {
+        200: z.object({
+          investmentsByType: z.array(z.object({
+            type: z.string(),
+            value: z.number(),
+            count: z.number(),
+          })),
+          investmentsByPlatform: z.array(z.object({
+            platform: z.string(),
+            value: z.number(),
+            count: z.number(),
+          })),
+          premiumsByProvider: z.array(z.object({
+            provider: z.string(),
+            monthlyPremium: z.number(),
+            yearlyPremium: z.number(),
+            policyCount: z.number(),
+            currency: z.string(),
+          })),
+          upcomingRenewals: z.array(z.object({
+            date: z.string(),
+            count: z.number(),
+            totalPremium: z.number(),
+          })),
         }),
       },
     },
