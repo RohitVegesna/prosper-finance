@@ -11,6 +11,9 @@
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },
+  "vercel": {
+    "outputDirectory": "client/dist"
+  },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
     "@hookform/resolvers": "^3.10.0",
