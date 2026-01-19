@@ -461,16 +461,29 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
 
   // Handle document upload
   const [documentPath, setDocumentPath] = useState<string | null>(policy?.documentUrl || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const onSubmit = (data: PolicyFormValues) => {
-    const payload = { ...data, documentUrl: documentPath };
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        formData.append(key, value.toString());
+      }
+    });
+    
+    // Add file if selected
+    if (selectedFile) {
+      formData.append('document', selectedFile);
+    }
     
     if (policy) {
-      updateMutation.mutate({ id: policy.id, ...payload }, {
+      updateMutation.mutate({ id: policy.id, formData }, {
         onSuccess: () => onOpenChange(false)
       });
     } else {
-      createMutation.mutate(payload, {
+      createMutation.mutate(formData, {
         onSuccess: () => onOpenChange(false)
       });
     }
@@ -636,40 +649,23 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
           <div className="space-y-2">
             <Label>Document</Label>
             <div className="flex items-center gap-4">
-              <ObjectUploader
-                policyId={policy?.id || 'new'}
-                onComplete={(result) => {
-                  if (result.successful && result.successful.length > 0) {
-                     // Get the object path from the first successful upload
-                     const uploadedFile = result.successful[0];
-                     // The response should contain the path
-                     const responsePath = uploadedFile.response?.body?.path;
-                     if (typeof responsePath === 'string') {
-                       setDocumentPath(responsePath);
-                       toast({ title: "Document uploaded successfully" });
-                     } else {
-                       // Log the issue and don't set a path - let the user try again
-                       console.error('Upload response missing path:', uploadedFile.response);
-                       toast({ 
-                         title: "Upload response error", 
-                         description: "File was uploaded but path was not returned. Please try again.",
-                         variant: "destructive"
-                       });
-                     }
-                  } else {
-                     toast({ 
-                       title: "Upload failed", 
-                       description: "Please try again",
-                       variant: "destructive" 
-                     });
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setSelectedFile(file || null);
+                  if (file) {
+                    toast({ title: "Document selected", description: file.name });
                   }
                 }}
-                buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                {documentPath ? "Replace Document" : "Upload Policy Document"}
-              </ObjectUploader>
-              {documentPath && <span className="text-xs text-green-600 flex items-center"><CheckCircle className="w-3 h-3 mr-1"/> Attached</span>}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {(policy?.documentUrl || selectedFile) && (
+                <div className="text-sm text-gray-600">
+                  {selectedFile ? `Selected: ${selectedFile.name}` : 'Current document attached'}
+                </div>
+              )}
             </div>
           </div>
 

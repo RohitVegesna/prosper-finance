@@ -511,15 +511,65 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     }
   });
 
-  app.post("/api/policies", async (req, res) => {
+  app.post("/api/policies", upload.single('document'), async (req, res) => {
     try {
       if (!req.session.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      let documentUrl = null;
+
+      // If a file was uploaded, handle it first
+      if (req.file) {
+        console.log('Processing file upload for new policy:', req.file.originalname);
+        
+        // Generate unique identifier for this file upload
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 12);
+        const uniqueFileId = `${timestamp}_${randomId}`;
+        
+        // Use original filename, but sanitize it
+        const sanitizedFileName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const fileName = sanitizedFileName;
+        
+        if (useVercelBlob) {
+          // Upload to Vercel Blob
+          try {
+            const blobPath = `documents/${req.session.user.tenantId}/${uniqueFileId}/${fileName}`;
+            console.log(`Uploading to Vercel Blob path: ${blobPath}`);
+            const blob = await put(blobPath, req.file.buffer, {
+              access: 'public',
+              contentType: req.file.mimetype
+            });
+            
+            documentUrl = blob.url;
+            console.log(`File uploaded to Vercel Blob: ${documentUrl}`);
+          } catch (error) {
+            console.error("Vercel Blob upload error:", error);
+            return res.status(500).json({ message: "Failed to upload document to cloud storage" });
+          }
+        } else {
+          // Development: Save to local disk
+          const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId);
+          const fileDir = path.join(tenantDir, uniqueFileId);
+          
+          if (!fs.existsSync(fileDir)) {
+            fs.mkdirSync(fileDir, { recursive: true });
+          }
+          
+          const localFilePath = path.join(fileDir, fileName);
+          fs.writeFileSync(localFilePath, req.file.buffer);
+          
+          const relativePath = path.relative(process.cwd(), localFilePath);
+          documentUrl = relativePath.replace(/\\/g, '/');
+          console.log(`File saved locally: ${documentUrl}`);
+        }
+      }
+
       const policyData = sanitizeDateFields({
         ...req.body,
-        tenantId: req.session.user.tenantId
+        tenantId: req.session.user.tenantId,
+        documentUrl: documentUrl // Include the blob URL if file was uploaded
       });
 
       const policy = await storage.createPolicy(policyData);
@@ -576,7 +626,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     }
   });
 
-  app.put("/api/policies/:id", async (req, res) => {
+  app.put("/api/policies/:id", upload.single('document'), async (req, res) => {
     try {
       if (!req.session.user) {
         return res.status(401).json({ message: "Unauthorized" });
@@ -587,7 +637,70 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(404).json({ message: "Policy not found" });
       }
 
-      const sanitizedData = sanitizeDateFields(req.body);
+      let documentUrl = policy.documentUrl; // Keep existing URL by default
+
+      // If a new file was uploaded, handle it
+      if (req.file) {
+        console.log('Processing file upload for policy update:', req.file.originalname);
+        
+        // Delete old document if it exists
+        if (policy.documentUrl) {
+          try {
+            console.log('Deleting old document before replacing:', policy.documentUrl);
+            await deleteBlobFile(policy.documentUrl);
+          } catch (error) {
+            console.error("Error deleting old document:", error);
+            // Continue with upload even if deletion fails
+          }
+        }
+        
+        // Generate unique identifier for this file upload
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 12);
+        const uniqueFileId = `${timestamp}_${randomId}`;
+        
+        // Use original filename, but sanitize it
+        const sanitizedFileName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const fileName = sanitizedFileName;
+        
+        if (useVercelBlob) {
+          // Upload to Vercel Blob
+          try {
+            const blobPath = `documents/${req.session.user.tenantId}/${uniqueFileId}/${fileName}`;
+            console.log(`Uploading to Vercel Blob path: ${blobPath}`);
+            const blob = await put(blobPath, req.file.buffer, {
+              access: 'public',
+              contentType: req.file.mimetype
+            });
+            
+            documentUrl = blob.url;
+            console.log(`File uploaded to Vercel Blob: ${documentUrl}`);
+          } catch (error) {
+            console.error("Vercel Blob upload error:", error);
+            return res.status(500).json({ message: "Failed to upload document to cloud storage" });
+          }
+        } else {
+          // Development: Save to local disk
+          const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId);
+          const fileDir = path.join(tenantDir, uniqueFileId);
+          
+          if (!fs.existsSync(fileDir)) {
+            fs.mkdirSync(fileDir, { recursive: true });
+          }
+          
+          const localFilePath = path.join(fileDir, fileName);
+          fs.writeFileSync(localFilePath, req.file.buffer);
+          
+          const relativePath = path.relative(process.cwd(), localFilePath);
+          documentUrl = relativePath.replace(/\\/g, '/');
+          console.log(`File saved locally: ${documentUrl}`);
+        }
+      }
+
+      const sanitizedData = sanitizeDateFields({
+        ...req.body,
+        documentUrl: documentUrl // Use new blob URL or keep existing one
+      });
       const updatedPolicy = await storage.updatePolicy(parseInt(req.params.id), sanitizedData);
       res.json(updatedPolicy);
     } catch (err) {

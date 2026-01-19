@@ -37,11 +37,12 @@ export function useCreatePolicy() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: CreatePolicyRequest) => {
+    mutationFn: async (data: FormData | CreatePolicyRequest) => {
+      const isFormData = data instanceof FormData;
       const res = await fetch(api.policies.create.path, {
         method: api.policies.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        headers: isFormData ? {} : { "Content-Type": "application/json" },
+        body: isFormData ? data : JSON.stringify(data),
         credentials: "include",
       });
       
@@ -77,12 +78,13 @@ export function useUpdatePolicy() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: number } & UpdatePolicyRequest) => {
+    mutationFn: async ({ id, formData, ...updates }: { id: number; formData?: FormData } & UpdatePolicyRequest) => {
       const url = buildUrl(api.policies.update.path, { id });
+      const isFormData = formData instanceof FormData;
       const res = await fetch(url, {
         method: api.policies.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
+        headers: isFormData ? {} : { "Content-Type": "application/json" },
+        body: isFormData ? formData : JSON.stringify(updates),
         credentials: "include",
       });
 
