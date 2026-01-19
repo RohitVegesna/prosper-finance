@@ -9,6 +9,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import cors from "cors";
 
 const { Pool } = pg;
 
@@ -402,6 +403,12 @@ declare module "http" {
 }
 
 // Session configuration
+// Configure CORS to allow credentials
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? true : 'http://localhost:5173',
+  credentials: true
+}));
+
 // Configure PostgreSQL session store
 const PgSession = connectPgSimple(session);
 const pgPool = new Pool({ connectionString: process.env.NEON_DATABASE_URL });
@@ -416,8 +423,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' && process.env.VERCEL_URL?.startsWith('https'),
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
