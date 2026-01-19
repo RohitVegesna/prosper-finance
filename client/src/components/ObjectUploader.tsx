@@ -48,28 +48,29 @@ export function ObjectUploader({
         fieldName: 'file',
         headers: {},
         bundle: false,
+        // Pass additional form data
+        getFormData: (formData, files) => {
+          if (policyId) {
+            formData.append('policyId', policyId.toString());
+          }
+          return formData;
+        },
         getResponseData(responseText, response) {
           // Parse the response and return in the format Uppy expects
           try {
             const data = JSON.parse(responseText);
+            console.log('Upload response:', data);
             return {
-              url: data.path || `uploads/${Date.now()}`, // Provide the expected 'url' field
-              uploadURL: data.path,
+              url: data.path || data.filePath, // Use actual path from response
+              uploadURL: data.path || data.filePath,
               ...data
             };
           } catch (error) {
-            // If parsing fails, return a basic response
+            console.error('Failed to parse upload response:', error, responseText);
             return {
-              url: `uploads/${Date.now()}`,
-              uploadURL: `uploads/${Date.now()}`
+              error: 'Failed to parse response'
             };
           }
-        }
-      })
-      .on("upload", () => {
-        // Add policy ID as form data for each upload
-        if (policyId) {
-          uppy.setMeta({ policyId: policyId });
         }
       })
       .on("complete", (result) => {

@@ -648,12 +648,13 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
                        setDocumentPath(responsePath);
                        toast({ title: "Document uploaded successfully" });
                      } else {
-                       // Fallback: generate path from file info
-                       const fileName = uploadedFile.name;
-                       const timestamp = Date.now();
-                       const generatedPath = `documents/tenant/${timestamp}-${fileName}`;
-                       setDocumentPath(generatedPath);
-                       toast({ title: "Document uploaded" });
+                       // Log the issue and don't set a path - let the user try again
+                       console.error('Upload response missing path:', uploadedFile.response);
+                       toast({ 
+                         title: "Upload response error", 
+                         description: "File was uploaded but path was not returned. Please try again.",
+                         variant: "destructive"
+                       });
                      }
                   } else {
                      toast({ 
