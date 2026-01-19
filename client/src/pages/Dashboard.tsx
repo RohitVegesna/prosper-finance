@@ -140,7 +140,7 @@ export default function Dashboard() {
                   {analytics?.investmentsByType && analytics.investmentsByType.length > 0 ? (
                     <div className="space-y-3">
                       {analytics.investmentsByType.map((item, index) => (
-                        <div key={item.type} className="flex justify-between items-center">
+                        <div key={`${item.type}-${index}`} className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-primary rounded-full"></div>
                             <span className="text-sm font-medium">{item.type}</span>
@@ -178,7 +178,7 @@ export default function Dashboard() {
                   {analytics?.investmentsByPlatform && analytics.investmentsByPlatform.length > 0 ? (
                     <div className="space-y-3">
                       {analytics.investmentsByPlatform.map((item, index) => (
-                        <div key={item.platform} className="flex justify-between items-center">
+                        <div key={`${item.platform}-${index}`} className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                             <span className="text-sm font-medium">{item.platform}</span>
@@ -216,16 +216,18 @@ export default function Dashboard() {
                   {analytics?.premiumsByProvider && analytics.premiumsByProvider.length > 0 ? (
                     <div className="space-y-3">
                       {analytics.premiumsByProvider.map((item, index) => {
-                        const currencySymbol = item.currency === 'INR' ? '₹' : 
-                                             item.currency === 'SEK' ? 'kr' : 
-                                             item.currency === 'USD' ? '$' : 
-                                             item.currency === 'EUR' ? '€' : item.currency;
-                        const yearlyAmount = item.currency === 'SEK' ? 
+                        // Fallback to SEK if currency is missing (for backwards compatibility)
+                        const currency = item.currency || 'SEK';
+                        const currencySymbol = currency === 'INR' ? '₹' : 
+                                             currency === 'SEK' ? 'kr' : 
+                                             currency === 'USD' ? '$' : 
+                                             currency === 'EUR' ? '€' : currency;
+                        const yearlyAmount = currency === 'SEK' ? 
                           `${item.yearlyPremium.toLocaleString()} kr` : 
                           `${currencySymbol}${item.yearlyPremium.toLocaleString()}`;
                         
                         return (
-                          <div key={item.provider} className="flex justify-between items-center">
+                          <div key={`${item.provider}-${index}`} className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                               <span className="text-sm font-medium">{item.provider}</span>
