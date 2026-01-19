@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 // Import everything directly to avoid module resolution issues in Vercel
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -572,11 +572,45 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(404).json({ message: "Policy not found" });
       }
 
+      // Delete the associated blob file if it exists
+      if (policy.documentUrl) {
+        await deleteBlobFile(policy.documentUrl);
+      }
+
       await storage.deletePolicy(parseInt(req.params.id));
       res.status(204).send();
     } catch (err) {
       console.error("Delete policy error:", err);
       res.status(500).json({ message: "Failed to delete policy" });
+    }
+  });
+
+  // Endpoint to delete a document from a policy
+  app.delete("/api/policies/:id/document", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const policyId = parseInt(req.params.id);
+      const policy = await storage.getPolicy(policyId);
+      
+      if (!policy || policy.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+
+      if (policy.documentUrl) {
+        // Delete the blob file
+        await deleteBlobFile(policy.documentUrl);
+        
+        // Update the policy to remove the document URL
+        await storage.updatePolicy(policyId, { documentUrl: null });
+      }
+
+      res.status(200).json({ message: "Document deleted successfully" });
+    } catch (err) {
+      console.error("Delete document error:", err);
+      res.status(500).json({ message: "Failed to delete document" });
     }
   });
 
@@ -879,6 +913,29 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     }
   });
 
+  // Helper function to delete blob files
+  const deleteBlobFile = async (documentUrl: string | null) => {
+    if (!documentUrl || !useVercelBlob) return;
+    
+    try {
+      // If it's a Vercel Blob URL, delete it from blob storage
+      if (documentUrl.includes('vercel-storage.com') || documentUrl.startsWith('https://')) {
+        await del(documentUrl);
+        console.log(`Deleted blob file: ${documentUrl}`);
+      } else {
+        // If it's a local file path, delete from local storage
+        const filePath = path.join(process.cwd(), documentUrl);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`Deleted local file: ${filePath}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to delete file: ${documentUrl}`, error);
+      // Don't throw error, just log it - deletion failure shouldn't block the operation
+    }
+  };
+
   // File upload endpoint - supports both local and Vercel Blob storage
   app.post("/api/uploads/file", upload.single('file'), async (req, res) => {
     try {
@@ -893,6 +950,22 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       // Get policy ID from request body (sent by the frontend)
       const policyId = req.body.policyId || 'general';
       console.log(`Uploading file for policy ID: ${policyId}`);
+      
+      // If replacing an existing document, delete the old one first
+      if (policyId !== 'new' && policyId !== 'general') {
+        try {
+          const existingPolicies = await db.select().from(policies).where(
+            and(eq(policies.id, parseInt(policyId)), eq(policies.tenantId, req.session.user.tenantId))
+          );
+          
+          if (existingPolicies.length > 0 && existingPolicies[0].documentUrl) {
+            await deleteBlobFile(existingPolicies[0].documentUrl);
+          }
+        } catch (error) {
+          console.error("Error deleting old document:", error);
+          // Continue with upload even if old file deletion fails
+        }
+      }
       
       // Use original filename, but sanitize it
       const sanitizedFileName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
