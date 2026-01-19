@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "../server/routes";
-import { registerSimpleAuthRoutes } from "../server/simple-auth";
+import { registerRoutes, registerSimpleAuthRoutes } from "./server-utils";
 
 const app = express();
 
