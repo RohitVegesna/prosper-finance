@@ -42,8 +42,7 @@ import {
   CheckCircle,
   Shield,
   Clock,
-  AlertTriangle,
-  X
+  AlertTriangle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -319,7 +318,7 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
           )}
           {policy.documentUrl && (
             <a 
-              href={policy.documentUrl.startsWith('https://') ? policy.documentUrl : `/objects/${policy.documentUrl}`}
+              href={`/objects/${policy.documentUrl}`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center text-xs text-primary hover:underline"
@@ -616,6 +615,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
             <div className="space-y-2">
               <Label htmlFor="maturityDate">Maturity Date <span className="text-gray-500 font-normal">(optional)</span></Label>
               <Input type="date" id="maturityDate" {...form.register("maturityDate")} />
+              <p className="text-xs text-gray-500">Leave empty for policies without maturity dates (e.g., health insurance)</p>
             </div>
           </div>
 
@@ -648,64 +648,22 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
 
           <div className="space-y-2">
             <Label>Document</Label>
-            <div className="space-y-2">
-              <div className="flex items-center justify-center w-full">
-                <label htmlFor="document-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <FileText className="w-8 h-8 mb-4 text-gray-500" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">PDF, DOC, DOCX, JPG, JPEG, PNG (MAX. 25MB)</p>
-                  </div>
-                  <Input
-                    id="document-upload"
-                    type="file"
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        // Check file size (25MB limit)
-                        const maxSize = 25 * 1024 * 1024; // 25MB in bytes
-                        if (file.size > maxSize) {
-                          toast({ 
-                            title: "File too large", 
-                            description: `File size is ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed size is 25MB.`,
-                            variant: "destructive"
-                          });
-                          // Clear the file input
-                          e.target.value = '';
-                          setSelectedFile(null);
-                          return;
-                        }
-                        
-                        setSelectedFile(file);
-                        toast({ title: "Document selected", description: file.name });
-                      } else {
-                        setSelectedFile(null);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-              {selectedFile && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-800 font-medium">Selected: {selectedFile.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFile(null)}
-                    className="ml-auto text-green-600 hover:text-green-800"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              {!selectedFile && policy?.documentUrl && (
-                <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-800 font-medium">Current document attached</span>
+            <div className="flex items-center gap-4">
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  setSelectedFile(file || null);
+                  if (file) {
+                    toast({ title: "Document selected", description: file.name });
+                  }
+                }}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              {(policy?.documentUrl || selectedFile) && (
+                <div className="text-sm text-gray-600">
+                  {selectedFile ? `Selected: ${selectedFile.name}` : 'Current document attached'}
                 </div>
               )}
             </div>

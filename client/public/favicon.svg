@@ -8,15 +8,12 @@
     </linearGradient>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="16" cy="16" r="15" fill="url(#bg)" stroke="#3730a3" stroke-width="2"/>
+  <!-- Background square with rounded corners -->
+  <rect x="2" y="2" width="28" height="28" rx="7" ry="7" fill="url(#bg)" stroke="#3730a3" stroke-width="2"/>
   
-  <!-- Shield shape -->
-  <path d="M16 4C13.5 4 10 5.5 10 8v6c0 6 6 12 6 12s6-6 6-12V8c0-2.5-3.5-4-6-4z" 
-        fill="white" opacity="0.9"/>
-  
-  <!-- Checkmark -->
-  <path d="M13 15l2 2 4-4" 
-        stroke="#4f46e5" stroke-width="2.5" fill="none" 
-        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- ShieldCheck icon (lucide-react) -->
+  <g transform="translate(16, 16) scale(0.85) translate(-12, -12)" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <path d="m9 12 2 2 4-4"/>
+  </g>
 </svg>
