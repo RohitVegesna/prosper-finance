@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
-import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+// import { registerObjectStorageRoutes } from \"./replit_integrations/object_storage\"; // Removed - using standard file upload
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -44,7 +44,8 @@ export async function registerRoutes(
   }));
 
   // 2. Setup Object Storage
-  registerObjectStorageRoutes(app);
+  // Object storage routes (removed - using standard file upload instead)
+  // registerObjectStorageRoutes(app);
 
   // 3. Auth Routes (Public)
   const registerSchema = z.object({

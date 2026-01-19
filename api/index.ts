@@ -153,6 +153,54 @@ class DatabaseStorage {
   async getUsersByTenant(tenantId: string): Promise<User[]> {
     return await db.select().from(users).where(eq(users.tenantId, tenantId));
   }
+
+  // Policies
+  async getPoliciesByTenant(tenantId: string): Promise<Policy[]> {
+    return await db.select().from(policies).where(eq(policies.tenantId, tenantId));
+  }
+
+  async getPolicy(id: number): Promise<Policy | undefined> {
+    const [policy] = await db.select().from(policies).where(eq(policies.id, id));
+    return policy;
+  }
+
+  async createPolicy(policy: any): Promise<Policy> {
+    const [newPolicy] = await db.insert(policies).values(policy).returning();
+    return newPolicy;
+  }
+
+  async updatePolicy(id: number, updates: any): Promise<Policy> {
+    const [updatedPolicy] = await db.update(policies).set(updates).where(eq(policies.id, id)).returning();
+    return updatedPolicy;
+  }
+
+  async deletePolicy(id: number): Promise<void> {
+    await db.delete(policies).where(eq(policies.id, id));
+  }
+
+  // Investments
+  async getInvestmentsByTenant(tenantId: string): Promise<Investment[]> {
+    return await db.select().from(investments).where(eq(investments.tenantId, tenantId));
+  }
+
+  async getInvestment(id: number): Promise<Investment | undefined> {
+    const [investment] = await db.select().from(investments).where(eq(investments.id, id));
+    return investment;
+  }
+
+  async createInvestment(investment: any): Promise<Investment> {
+    const [newInvestment] = await db.insert(investments).values(investment).returning();
+    return newInvestment;
+  }
+
+  async updateInvestment(id: number, updates: any): Promise<Investment> {
+    const [updatedInvestment] = await db.update(investments).set(updates).where(eq(investments.id, id)).returning();
+    return updatedInvestment;
+  }
+
+  async deleteInvestment(id: number): Promise<void> {
+    await db.delete(investments).where(eq(investments.id, id));
+  }
 }
 
 // Initialize storage
@@ -374,6 +422,186 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     } catch (err) {
       console.error("Reset password error:", err);
       res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Policies endpoints
+  app.get("/api/policies", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const userPolicies = await storage.getPoliciesByTenant(req.session.user.tenantId!);
+      res.json(userPolicies);
+    } catch (err) {
+      console.error("Get policies error:", err);
+      res.status(500).json({ message: "Failed to get policies" });
+    }
+  });
+
+  app.post("/api/policies", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const policyData = {
+        ...req.body,
+        tenantId: req.session.user.tenantId
+      };
+
+      const policy = await storage.createPolicy(policyData);
+      res.status(201).json(policy);
+    } catch (err) {
+      console.error("Create policy error:", err);
+      res.status(500).json({ message: "Failed to create policy" });
+    }
+  });
+
+  app.get("/api/policies/:id", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const policy = await storage.getPolicy(parseInt(req.params.id));
+      if (!policy || policy.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+
+      res.json(policy);
+    } catch (err) {
+      console.error("Get policy error:", err);
+      res.status(500).json({ message: "Failed to get policy" });
+    }
+  });
+
+  app.put("/api/policies/:id", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const policy = await storage.getPolicy(parseInt(req.params.id));
+      if (!policy || policy.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+
+      const updatedPolicy = await storage.updatePolicy(parseInt(req.params.id), req.body);
+      res.json(updatedPolicy);
+    } catch (err) {
+      console.error("Update policy error:", err);
+      res.status(500).json({ message: "Failed to update policy" });
+    }
+  });
+
+  app.delete("/api/policies/:id", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const policy = await storage.getPolicy(parseInt(req.params.id));
+      if (!policy || policy.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Policy not found" });
+      }
+
+      await storage.deletePolicy(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Delete policy error:", err);
+      res.status(500).json({ message: "Failed to delete policy" });
+    }
+  });
+
+  // Investments endpoints
+  app.get("/api/investments", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const userInvestments = await storage.getInvestmentsByTenant(req.session.user.tenantId!);
+      res.json(userInvestments);
+    } catch (err) {
+      console.error("Get investments error:", err);
+      res.status(500).json({ message: "Failed to get investments" });
+    }
+  });
+
+  app.post("/api/investments", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const investmentData = {
+        ...req.body,
+        tenantId: req.session.user.tenantId
+      };
+
+      const investment = await storage.createInvestment(investmentData);
+      res.status(201).json(investment);
+    } catch (err) {
+      console.error("Create investment error:", err);
+      res.status(500).json({ message: "Failed to create investment" });
+    }
+  });
+
+  app.get("/api/investments/:id", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const investment = await storage.getInvestment(parseInt(req.params.id));
+      if (!investment || investment.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Investment not found" });
+      }
+
+      res.json(investment);
+    } catch (err) {
+      console.error("Get investment error:", err);
+      res.status(500).json({ message: "Failed to get investment" });
+    }
+  });
+
+  app.put("/api/investments/:id", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const investment = await storage.getInvestment(parseInt(req.params.id));
+      if (!investment || investment.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Investment not found" });
+      }
+
+      const updatedInvestment = await storage.updateInvestment(parseInt(req.params.id), req.body);
+      res.json(updatedInvestment);
+    } catch (err) {
+      console.error("Update investment error:", err);
+      res.status(500).json({ message: "Failed to update investment" });
+    }
+  });
+
+  app.delete("/api/investments/:id", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const investment = await storage.getInvestment(parseInt(req.params.id));
+      if (!investment || investment.tenantId !== req.session.user.tenantId) {
+        return res.status(404).json({ message: "Investment not found" });
+      }
+
+      await storage.deleteInvestment(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Delete investment error:", err);
+      res.status(500).json({ message: "Failed to delete investment" });
     }
   });
 };
