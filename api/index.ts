@@ -572,12 +572,18 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(404).json({ message: "Policy not found" });
       }
 
+      console.log(`Deleting policy ${req.params.id} with document: ${policy.documentUrl}`);
+
       // Delete the associated blob file if it exists
       if (policy.documentUrl) {
+        console.log(`Found document URL to delete: ${policy.documentUrl}`);
         await deleteBlobFile(policy.documentUrl);
+      } else {
+        console.log(`No document URL found for policy ${req.params.id}`);
       }
 
       await storage.deletePolicy(parseInt(req.params.id));
+      console.log(`Successfully deleted policy ${req.params.id}`);
       res.status(204).send();
     } catch (err) {
       console.error("Delete policy error:", err);
@@ -915,19 +921,22 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
 
   // Helper function to delete blob files
   const deleteBlobFile = async (documentUrl: string | null) => {
-    if (!documentUrl || !useVercelBlob) return;
+    if (!documentUrl) return;
     
     try {
-      // If it's a Vercel Blob URL, delete it from blob storage
+      // If it's a Vercel Blob URL (contains vercel-storage.com or starts with https://), delete from blob storage
       if (documentUrl.includes('vercel-storage.com') || documentUrl.startsWith('https://')) {
+        console.log(`Attempting to delete blob file: ${documentUrl}`);
         await del(documentUrl);
-        console.log(`Deleted blob file: ${documentUrl}`);
+        console.log(`Successfully deleted blob file: ${documentUrl}`);
       } else {
         // If it's a local file path, delete from local storage
         const filePath = path.join(process.cwd(), documentUrl);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
           console.log(`Deleted local file: ${filePath}`);
+        } else {
+          console.log(`Local file not found: ${filePath}`);
         }
       }
     } catch (error) {
