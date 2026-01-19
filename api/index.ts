@@ -1,4 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { put } from "@vercel/blob";
 // Import everything directly to avoid module resolution issues in Vercel
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -728,6 +732,204 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     } catch (err) {
       console.error("Dashboard stats error:", err);
       res.status(500).json({ message: "Failed to get dashboard stats" });
+    }
+  });
+
+  // Configure multer for file uploads
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+  const hasVercelBlobToken = !!process.env.BLOB_READ_WRITE_TOKEN;
+  const useVercelBlob = isProduction || hasVercelBlobToken; // Use Vercel Blob if in production OR if token is available
+  
+  let upload: multer.Multer;
+  
+  if (useVercelBlob) {
+    // Production or development with Vercel Blob token: Use memory storage for Vercel Blob
+    upload = multer({ 
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+      fileFilter: (req, file, cb) => {
+        const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
+        if (allowedTypes.test(path.extname(file.originalname))) {
+          cb(null, true);
+        } else {
+          cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'));
+        }
+      }
+    });
+  } else {
+    // Development without Vercel Blob token: Use disk storage
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    upload = multer({ 
+      storage: multer.diskStorage({
+        destination: function (req, file, cb) {
+          const tenantId = req.session?.user?.tenantId || 'default';
+          const tenantDir = path.join(uploadsDir, tenantId);
+          
+          if (!fs.existsSync(tenantDir)) {
+            fs.mkdirSync(tenantDir, { recursive: true });
+          }
+          
+          cb(null, tenantDir);
+        },
+        filename: function (req, file, cb) {
+          const timestamp = Date.now();
+          const ext = path.extname(file.originalname);
+          const baseName = path.basename(file.originalname, ext);
+          const fileName = `${timestamp}-${baseName}${ext}`;
+          cb(null, fileName);
+        }
+      }),
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+      fileFilter: (req, file, cb) => {
+        const allowedTypes = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
+        if (allowedTypes.test(path.extname(file.originalname))) {
+          cb(null, true);
+        } else {
+          cb(new Error('Only PDF, DOC, DOCX, JPG, JPEG, PNG files are allowed'));
+        }
+      }
+    });
+  }
+
+  // Upload endpoints (simplified for demo)
+  app.post("/api/uploads/request-url", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { name, size, contentType } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "File name is required" });
+      }
+
+      // Generate a unique file path
+      const timestamp = Date.now();
+      const fileName = `${timestamp}-${name}`;
+      const objectPath = `documents/${req.session.user.tenantId}/${fileName}`;
+      
+      // Return upload URL that points to our mock upload endpoint
+      const uploadURL = `/api/uploads/file`;
+
+      res.json({
+        method: "POST",
+        url: uploadURL,
+        fields: {
+          path: objectPath,
+          fileName: fileName
+        }
+      });
+    } catch (err) {
+      console.error("Upload request error:", err);
+      res.status(500).json({ message: "Failed to get upload URL" });
+    }
+  });
+
+  // Serve uploaded files (only for development - production uses direct Vercel Blob URLs)
+  app.get("/uploads/:tenantId/:filename", (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // In production or when using Vercel Blob, files are served directly from Vercel Blob
+      if (useVercelBlob) {
+        return res.status(404).json({ message: "File serving not available when using Vercel Blob" });
+      }
+
+      const { tenantId, filename } = req.params;
+      
+      // Only allow users to access files from their own tenant
+      if (req.session.user.tenantId !== tenantId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const filePath = path.join(process.cwd(), 'uploads', tenantId, filename);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Set appropriate headers and send file
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png'
+      };
+
+      const mimeType = mimeTypes[ext] || 'application/octet-stream';
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${path.basename(filename)}"`);
+      
+      res.sendFile(filePath);
+    } catch (err) {
+      console.error("File serve error:", err);
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
+  // File upload endpoint - supports both local and Vercel Blob storage
+  app.post("/api/uploads/file", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const timestamp = Date.now();
+      const ext = path.extname(req.file.originalname);
+      const baseName = path.basename(req.file.originalname, ext);
+      const fileName = `${timestamp}-${baseName}${ext}`;
+      
+      let filePath: string;
+      
+      if (useVercelBlob) {
+        // Upload to Vercel Blob (production or dev with token)
+        try {
+          const blob = await put(`documents/${req.session.user.tenantId}/${fileName}`, req.file.buffer, {
+            access: 'public',
+            contentType: req.file.mimetype
+          });
+          
+          filePath = blob.url;
+          console.log(`File uploaded to Vercel Blob: ${filePath}`);
+        } catch (error) {
+          console.error("Vercel Blob upload error:", error);
+          return res.status(500).json({ message: "Failed to upload to cloud storage" });
+        }
+      } else {
+        // Development: File already saved to disk by multer
+        filePath = req.file.path;
+        const relativePath = path.relative(process.cwd(), filePath);
+        filePath = relativePath.replace(/\\/g, '/'); // Normalize path separators for web
+        console.log(`File saved locally: ${filePath}`);
+      }
+      
+      res.status(200).json({ 
+        success: true, 
+        path: filePath,
+        message: "File uploaded successfully",
+        filename: fileName,
+        size: req.file.size,
+        originalName: req.file.originalname
+      });
+    } catch (err) {
+      console.error("File upload error:", err);
+      res.status(500).json({ message: "Failed to upload file" });
     }
   });
 };

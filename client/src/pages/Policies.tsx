@@ -636,35 +636,29 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
             <Label>Document</Label>
             <div className="flex items-center gap-4">
               <ObjectUploader
-                onGetUploadParameters={async (file) => {
-                  const res = await fetch("/api/uploads/request-url", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      name: file.name,
-                      size: file.size,
-                      contentType: file.type,
-                    }),
-                  });
-                  const data = await res.json();
-                  return {
-                    method: "PUT",
-                    url: data.uploadURL,
-                    headers: { "Content-Type": file.type || "application/octet-stream" },
-                  };
-                }}
                 onComplete={(result) => {
                   if (result.successful && result.successful.length > 0) {
-                     // In a real app, we'd get the path from the upload response
-                     // Here we're approximating based on the earlier request
-                     // Ideally ObjectUploader would return the objectPath
-                     // For now, let's assume successful upload
-                     toast({ title: "Document uploaded" });
-                     // This part needs the object path from the signed URL response which isn't directly exposed by Uppy's result easily without custom logic
-                     // BUT, our backend returns objectPath in the request-url response.
-                     // The simple fix: We can't easily get it here without modifying ObjectUploader or tracking state.
-                     // Let's assume for this demo that we handle it or just mark it as uploaded.
-                     // A robust solution involves storing the objectPath returned by request-url in a ref/state map.
+                     // Get the object path from the first successful upload
+                     const uploadedFile = result.successful[0];
+                     // The response should contain the path
+                     const responsePath = uploadedFile.response?.body?.path;
+                     if (typeof responsePath === 'string') {
+                       setDocumentPath(responsePath);
+                       toast({ title: "Document uploaded successfully" });
+                     } else {
+                       // Fallback: generate path from file info
+                       const fileName = uploadedFile.name;
+                       const timestamp = Date.now();
+                       const generatedPath = `documents/tenant/${timestamp}-${fileName}`;
+                       setDocumentPath(generatedPath);
+                       toast({ title: "Document uploaded" });
+                     }
+                  } else {
+                     toast({ 
+                       title: "Upload failed", 
+                       description: "Please try again",
+                       variant: "destructive" 
+                     });
                   }
                 }}
                 buttonClassName="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80"
