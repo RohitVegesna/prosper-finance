@@ -17,9 +17,9 @@ declare module 'express-session' {
 }
 
 export async function registerRoutes(
-  httpServer: Server,
+  httpServer: Server | null,
   app: Express
-): Promise<Server> {
+): Promise<Server | null> {
   // 1. Setup Session
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
