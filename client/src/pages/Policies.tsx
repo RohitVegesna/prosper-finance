@@ -316,7 +316,7 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
           )}
           {policy.documentUrl && (
             <a 
-              href={`/objects/${policy.documentUrl}`} 
+              href={policy.documentUrl} 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center text-xs text-primary hover:underline"
