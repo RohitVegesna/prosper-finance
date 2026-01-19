@@ -1,7 +1,7 @@
 // Server utilities for Vercel deployment
 // This file consolidates server functionality for the serverless environment
 
-import { db } from "../server/db";
+import { db } from "./db";
 import { Storage } from "../server/storage";
 
 // Initialize storage
