@@ -82,7 +82,7 @@ const initializeRoutes = async () => {
         await registerRoutes(null as any, app);
         console.log("Full routes initialized successfully");
       } catch (error) {
-        console.warn("Full routes failed, using simple auth only:", error.message);
+        console.warn("Full routes failed, using simple auth only:", error instanceof Error ? error.message : String(error));
       }
       
       routesInitialized = true;
@@ -100,7 +100,7 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
     next();
   } catch (error) {
     console.error("Error initializing routes:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: "Internal Server Error", error: error instanceof Error ? error.message : String(error) });
   }
 });
 

@@ -81,7 +81,7 @@ export async function registerSimpleAuthRoutes(app: Express) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
-      res.status(500).json({ message: "Registration failed", error: err.message });
+      res.status(500).json({ message: "Registration failed", error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -113,7 +113,7 @@ export async function registerSimpleAuthRoutes(app: Express) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
-      res.status(500).json({ message: "Login failed", error: err.message });
+      res.status(500).json({ message: "Login failed", error: err instanceof Error ? err.message : String(err) });
     }
   });
 }

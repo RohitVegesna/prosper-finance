@@ -530,7 +530,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
               <Label htmlFor="premiumCurrency">Currency</Label>
               <Select 
                 onValueChange={(val) => form.setValue("premiumCurrency", val)} 
-                defaultValue={form.getValues("premiumCurrency")}
+                defaultValue={form.getValues("premiumCurrency") || undefined}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Currency" />
@@ -545,7 +545,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
               <Label htmlFor="premiumFrequency">Frequency</Label>
               <Select 
                 onValueChange={(val) => form.setValue("premiumFrequency", val)} 
-                defaultValue={form.getValues("premiumFrequency")}
+                defaultValue={form.getValues("premiumFrequency") || undefined}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
@@ -570,7 +570,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
               <Label htmlFor="beneficiaryType">Beneficiary Type</Label>
               <Select 
                 onValueChange={(val) => form.setValue("beneficiaryType", val)} 
-                defaultValue={form.getValues("beneficiaryType")}
+                defaultValue={form.getValues("beneficiaryType") || undefined}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select beneficiary type" />

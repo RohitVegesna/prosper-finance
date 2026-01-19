@@ -176,7 +176,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createInvestment(investment: InsertInvestment): Promise<Investment> {
-    const [newInvestment] = await db.insert(investments).values(investment).returning();
+    const [newInvestment] = await db.insert(investments).values(investment as any).returning();
     return newInvestment;
   }
 
@@ -185,7 +185,7 @@ export class DatabaseStorage implements IStorage {
     const updatesWithTimestamp = {
       ...updates,
       lastUpdated: new Date()
-    };
+    } as any; // Type assertion to handle the timestamp field
     
     const [updated] = await db
       .update(investments)
