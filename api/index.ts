@@ -497,7 +497,14 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       }
 
       const userPolicies = await storage.getPoliciesByTenant(req.session.user.tenantId!);
-      res.json(userPolicies);
+      
+      // Fix document URLs that are in wrong format
+      const cleanedPolicies = userPolicies.map(policy => ({
+        ...policy,
+        documentUrl: fixDocumentUrl(policy.documentUrl)
+      }));
+      
+      res.json(cleanedPolicies);
     } catch (err) {
       console.error("Get policies error:", err);
       res.status(500).json({ message: "Failed to get policies" });
@@ -520,6 +527,34 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
     } catch (err) {
       console.error("Create policy error:", err);
       res.status(500).json({ message: "Failed to create policy" });
+    }
+  });
+
+  // Cleanup endpoint to fix document URLs in wrong format
+  app.post("/api/policies/cleanup-document-urls", async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const userPolicies = await storage.getPoliciesByTenant(req.session.user.tenantId!);
+      let updatedCount = 0;
+
+      for (const policy of userPolicies) {
+        if (policy.documentUrl && policy.documentUrl.startsWith('documents/tenant/')) {
+          console.log(`Cleaning up policy ${policy.id} - removing invalid document URL: ${policy.documentUrl}`);
+          await storage.updatePolicy(policy.id, { documentUrl: null });
+          updatedCount++;
+        }
+      }
+
+      res.json({ 
+        message: `Cleaned up ${updatedCount} policies with invalid document URLs`,
+        updatedCount 
+      });
+    } catch (err) {
+      console.error("Cleanup document URLs error:", err);
+      res.status(500).json({ message: "Failed to cleanup document URLs" });
     }
   });
 
@@ -920,6 +955,29 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
   });
 
   // Helper function to delete blob files
+  // Helper function to fix document URLs that are in wrong format
+  const fixDocumentUrl = (documentUrl: string | null): string | null => {
+    if (!documentUrl) return null;
+    
+    // If it's already a proper Vercel Blob URL, return as-is
+    if (documentUrl.startsWith('https://') && documentUrl.includes('vercel-storage.com')) {
+      return documentUrl;
+    }
+    
+    // If it's a local development path, return as-is
+    if (documentUrl.startsWith('/') || documentUrl.includes('uploads/')) {
+      return documentUrl;
+    }
+    
+    // If it's the old format like "documents/tenant/filename", return null so it can be re-uploaded
+    if (documentUrl.startsWith('documents/tenant/')) {
+      console.log(`Found old format document URL: ${documentUrl} - marking for re-upload`);
+      return null;
+    }
+    
+    return documentUrl;
+  };
+
   const deleteBlobFile = async (documentUrl: string | null) => {
     if (!documentUrl) return;
     

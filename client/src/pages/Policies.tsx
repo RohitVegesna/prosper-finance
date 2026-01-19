@@ -97,7 +97,8 @@ export default function Policies() {
   // Calculate stats from policies
   const stats = {
     total: policies?.length || 0,
-    active: policies?.filter(p => p.maturityDate && differenceInDays(parseISO(p.maturityDate), new Date()) > 60).length || 0,
+    // Active: policies that are not matured (no maturity date OR maturity date is in the future)
+    active: policies?.filter(p => !p.maturityDate || differenceInDays(parseISO(p.maturityDate), new Date()) >= 0).length || 0,
     renewals: policies?.filter(p => p.nextRenewalDate && differenceInDays(parseISO(p.nextRenewalDate), new Date()) <= 30 && differenceInDays(parseISO(p.nextRenewalDate), new Date()) > 0).length || 0,
     matured: policies?.filter(p => p.maturityDate && differenceInDays(parseISO(p.maturityDate), new Date()) < 0).length || 0,
   };
