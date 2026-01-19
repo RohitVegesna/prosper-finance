@@ -207,6 +207,21 @@ class DatabaseStorage {
 const storage = new DatabaseStorage();
 
 // === AUTH ROUTES ===
+
+// Helper function to sanitize date fields (convert empty strings to undefined)
+function sanitizeDateFields(data: any): any {
+  const sanitized = { ...data };
+  const dateFields = ['startDate', 'maturityDate', 'nextRenewalDate', 'lastPremiumDate', 'purchaseDate'];
+  
+  dateFields.forEach(field => {
+    if (sanitized[field] === '' || sanitized[field] === null) {
+      sanitized[field] = undefined;
+    }
+  });
+  
+  return sanitized;
+}
+
 const registerSimpleAuthRoutes = async (app: express.Express) => {
   const registerSchema = z.object({
     email: z.string().email(),
@@ -446,10 +461,10 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const policyData = {
+      const policyData = sanitizeDateFields({
         ...req.body,
         tenantId: req.session.user.tenantId
-      };
+      });
 
       const policy = await storage.createPolicy(policyData);
       res.status(201).json(policy);
@@ -488,7 +503,8 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(404).json({ message: "Policy not found" });
       }
 
-      const updatedPolicy = await storage.updatePolicy(parseInt(req.params.id), req.body);
+      const sanitizedData = sanitizeDateFields(req.body);
+      const updatedPolicy = await storage.updatePolicy(parseInt(req.params.id), sanitizedData);
       res.json(updatedPolicy);
     } catch (err) {
       console.error("Update policy error:", err);
@@ -536,10 +552,10 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const investmentData = {
+      const investmentData = sanitizeDateFields({
         ...req.body,
         tenantId: req.session.user.tenantId
-      };
+      });
 
       const investment = await storage.createInvestment(investmentData);
       res.status(201).json(investment);
@@ -578,7 +594,8 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(404).json({ message: "Investment not found" });
       }
 
-      const updatedInvestment = await storage.updateInvestment(parseInt(req.params.id), req.body);
+      const sanitizedData = sanitizeDateFields(req.body);
+      const updatedInvestment = await storage.updateInvestment(parseInt(req.params.id), sanitizedData);
       res.json(updatedInvestment);
     } catch (err) {
       console.error("Update investment error:", err);

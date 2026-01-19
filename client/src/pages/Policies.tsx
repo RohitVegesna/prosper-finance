@@ -199,6 +199,7 @@ export default function Policies() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Beneficiaries</SelectItem>
+                <SelectItem value="SINGLE">Single</SelectItem>
                 <SelectItem value="FAMILY">Family</SelectItem>
                 <SelectItem value="PARENTS">Parents</SelectItem>
                 <SelectItem value="SPOUSE">Spouse</SelectItem>
@@ -450,7 +451,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
       premiumCurrency: "SEK",
       premiumFrequency: "yearly",
       nominee: "",
-      beneficiaryType: "FAMILY",
+      beneficiaryType: "SINGLE",
       paidTo: "",
       notes: "",
       tenantId: "1", // TODO: Get from auth context or implicit
@@ -576,6 +577,7 @@ function PolicyDialog({ open, onOpenChange, policy }: { open: boolean, onOpenCha
                   <SelectValue placeholder="Select beneficiary type" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="SINGLE">Single</SelectItem>
                   <SelectItem value="FAMILY">Family</SelectItem>
                   <SelectItem value="PARENTS">Parents</SelectItem>
                   <SelectItem value="SPOUSE">Spouse</SelectItem>
