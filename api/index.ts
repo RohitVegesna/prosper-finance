@@ -215,6 +215,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         lastName: user.lastName,
         role: user.role,
         tenantId: user.tenantId,
+        domain: tenant.domain,
         message: "User created successfully"
       });
     } catch (err) {
@@ -240,6 +241,9 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      // Get user's tenant for domain info
+      const tenant = await storage.getTenant(user.tenantId!);
+
       res.json({
         id: user.id,
         email: user.email,
@@ -247,6 +251,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         lastName: user.lastName,
         role: user.role,
         tenantId: user.tenantId,
+        domain: tenant?.domain || null,
       });
     } catch (err) {
       console.error("Login error:", err);
