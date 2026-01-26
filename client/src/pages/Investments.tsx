@@ -297,12 +297,12 @@ function InvestmentCard({ investment, onEdit }: { investment: any, onEdit: () =>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onEdit}>
+                <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
                   <Edit2 className="w-4 h-4 mr-2" />
                   Edit
                 </DropdownMenuItem>
@@ -312,7 +312,7 @@ function InvestmentCard({ investment, onEdit }: { investment: any, onEdit: () =>
                       deleteMutation.mutate(investment.id);
                     }
                   }}
-                  className="text-destructive focus:text-destructive"
+                  className="text-destructive focus:text-destructive cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete

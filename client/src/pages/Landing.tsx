@@ -11,7 +11,7 @@ export default function Landing() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2 font-display text-xl font-bold text-primary">
               <ShieldCheck className="w-6 h-6" />
-              <span>Prosper</span>
+              <span>Chronicle</span>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/login">

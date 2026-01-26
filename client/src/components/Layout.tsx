@@ -55,7 +55,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="p-2 bg-primary rounded-xl">
               <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-sidebar-foreground">Prosper</span>
+            <span className="text-sidebar-foreground">Chronicle</span>
           </div>
         </div>
         
@@ -102,7 +102,7 @@ export function Layout({ children }: LayoutProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
@@ -114,19 +114,22 @@ export function Layout({ children }: LayoutProps) {
       {/* Mobile Header */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between p-4 bg-background/80 backdrop-blur-md border-b border-border">
-          <div className="flex items-center gap-2 font-display text-xl font-bold text-primary">
-            <ShieldCheck className="w-6 h-6" />
-            <span>Prosper</span>
-          </div>
-          
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="w-6 h-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <nav className="flex flex-col gap-4 mt-8">
+            <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-sidebar text-sidebar-foreground border-sidebar-border">
+              {/* Mobile Menu Logo */}
+              <div className="flex items-center gap-3 font-display text-xl font-bold mb-8 px-2">
+                <div className="p-2 bg-primary rounded-xl">
+                  <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <span className="text-sidebar-foreground">Chronicle</span>
+              </div>
+              
+              <nav className="flex flex-col gap-4">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
@@ -134,17 +137,17 @@ export function Layout({ children }: LayoutProps) {
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-lg font-medium transition-colors ${
                       location === item.href
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted"
+                        : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                     }`}
                   >
                     <item.icon className="w-5 h-5" />
                     {item.name}
                   </Link>
                 ))}
-                <div className="border-t border-border mt-auto pt-4">
+                <div className="border-t border-sidebar-border mt-auto pt-4">
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                     onClick={() => logout()}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -154,6 +157,13 @@ export function Layout({ children }: LayoutProps) {
               </nav>
             </SheetContent>
           </Sheet>
+          
+          <div className="flex items-center gap-2 font-display text-xl font-bold text-primary">
+            <ShieldCheck className="w-6 h-6" />
+            <span>Chronicle</span>
+          </div>
+          
+          <div className="w-10"></div> {/* Spacer for centering */}
         </header>
 
         {/* Main Content */}

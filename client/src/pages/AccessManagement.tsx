@@ -191,19 +191,19 @@ export default function AccessManagement() {
                 {users.map((user) => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border bg-card"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border border-border bg-card gap-4"
                     data-testid={`user-row-${user.id}`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
                       <Avatar className="h-12 w-12 border border-border">
                         <AvatarImage src={user.profileImageUrl || ""} />
                         <AvatarFallback className="bg-primary/10 text-primary">
                           {user.firstName?.charAt(0) || user.email?.charAt(0) || "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium truncate">
                             {user.firstName
                               ? `${user.firstName} ${user.lastName || ""}`
                               : "Unknown User"}
@@ -215,11 +215,11 @@ export default function AccessManagement() {
                             </Badge>
                           )}
                         </div>
-                        <span className="text-sm text-muted-foreground">{user.email}</span>
+                        <span className="text-sm text-muted-foreground truncate block">{user.email}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 justify-end sm:justify-start flex-shrink-0">
                       <Select
                         value={user.role || "user"}
                         onValueChange={(value) =>

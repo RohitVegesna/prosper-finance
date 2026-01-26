@@ -242,30 +242,44 @@ export default function Policies() {
             </Button>
           </div>
         ) : (
-          <div className="bg-card rounded-xl shadow-soft border-0 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="font-semibold">Policy Details</TableHead>
-                  <TableHead className="font-semibold">Type & Provider</TableHead>
-                  <TableHead className="font-semibold">Premium</TableHead>
-                  <TableHead className="font-semibold">Dates</TableHead>
-                  <TableHead className="font-semibold">Beneficiary</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {policies?.map((policy) => (
-                  <PolicyTableRow 
-                    key={policy.id} 
-                    policy={policy} 
-                    onEdit={() => setEditingPolicy(policy)}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Desktop Table View */}
+            <div className="bg-card rounded-xl shadow-soft border-0 overflow-hidden hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="font-semibold">Policy Details</TableHead>
+                    <TableHead className="font-semibold">Type & Provider</TableHead>
+                    <TableHead className="font-semibold">Premium</TableHead>
+                    <TableHead className="font-semibold">Dates</TableHead>
+                    <TableHead className="font-semibold">Beneficiary</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {policies?.map((policy) => (
+                    <PolicyTableRow 
+                      key={policy.id} 
+                      policy={policy} 
+                      onEdit={() => setEditingPolicy(policy)}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {policies?.map((policy) => (
+                <PolicyMobileCard 
+                  key={policy.id} 
+                  policy={policy} 
+                  onEdit={() => setEditingPolicy(policy)}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         <PolicyDialog 
@@ -402,12 +416,12 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
       <TableCell className="py-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>
+            <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
               <Edit2 className="w-4 h-4 mr-2" />
               Edit
             </DropdownMenuItem>
@@ -417,7 +431,7 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
                   deleteMutation.mutate(policy.id);
                 }
               }}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:text-destructive cursor-pointer"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
@@ -426,6 +440,161 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
         </DropdownMenu>
       </TableCell>
     </TableRow>
+  );
+}
+
+// Mobile Card Component for responsive design
+function PolicyMobileCard({ policy, onEdit }: { policy: any, onEdit: () => void }) {
+  const deleteMutation = useDeletePolicy();
+  const daysToMaturity = policy.maturityDate ? differenceInDays(parseISO(policy.maturityDate), new Date()) : null;
+  
+  let statusColor = "bg-green-500/10 text-green-700 border-green-200";
+  let statusText = "Active";
+
+  if (daysToMaturity !== null) {
+    if (daysToMaturity < 0) {
+      statusColor = "bg-red-500/10 text-red-700 border-red-200";
+      statusText = "Matured";
+    } else if (daysToMaturity <= 30) {
+      statusColor = "bg-red-500/10 text-red-700 border-red-200";
+      statusText = `Maturing in ${daysToMaturity} days`;
+    } else if (daysToMaturity <= 60) {
+      statusColor = "bg-orange-500/10 text-orange-700 border-orange-200";
+      statusText = `Maturing in ${daysToMaturity} days`;
+    }
+  }
+
+  return (
+    <Card className="bg-card border-0 shadow-soft">
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm mb-1">{policy.policyName}</h3>
+            {policy.policyNumber && (
+              <p className="text-xs text-muted-foreground mb-1">#{policy.policyNumber}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={`${statusColor} text-xs`}>
+              {daysToMaturity !== null && daysToMaturity <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
+              {statusText}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this policy?")) {
+                      deleteMutation.mutate(policy.id);
+                    }
+                  }}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {/* Type & Provider */}
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">{policy.policyType}</Badge>
+            <span className="text-sm text-muted-foreground">{policy.provider}</span>
+          </div>
+
+          {/* Premium */}
+          {policy.premium && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Premium:</span>
+              <div className="text-right">
+                <div className="font-semibold text-sm">
+                  {policy.premiumCurrency === 'INR' ? '₹' : ''}{Number(policy.premium).toLocaleString()}{policy.premiumCurrency === 'SEK' ? ' kr' : ''}
+                </div>
+                {policy.premiumFrequency && (
+                  <div className="text-xs text-muted-foreground">/{policy.premiumFrequency}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Country */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Country:</span>
+            <span className="text-sm">{policy.country}</span>
+          </div>
+
+          {/* Dates */}
+          <div className="space-y-1">
+            {policy.startDate && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Start Date:</span>
+                <span>{format(parseISO(policy.startDate), "MMM d, yyyy")}</span>
+              </div>
+            )}
+            {policy.nextRenewalDate && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Renewal:</span>
+                <span>{format(parseISO(policy.nextRenewalDate), "MMM d, yyyy")}</span>
+              </div>
+            )}
+            {policy.maturityDate && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Maturity:</span>
+                <span>{format(parseISO(policy.maturityDate), "MMM d, yyyy")}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Beneficiary */}
+          <div className="space-y-1">
+            {policy.paidTo && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Paid to:</span>
+                <span>{policy.paidTo}</span>
+              </div>
+            )}
+            {policy.nominee && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Nominee:</span>
+                <span>{policy.nominee}</span>
+              </div>
+            )}
+            {policy.beneficiaryType && (
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Beneficiary Type:</span>
+                <Badge variant="secondary" className="text-xs">{policy.beneficiaryType}</Badge>
+              </div>
+            )}
+          </div>
+
+          {/* Document Link */}
+          {policy.documentUrl && (
+            <div className="pt-2 border-t border-border/50">
+              <a 
+                href={policy.documentUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-xs text-primary hover:underline"
+              >
+                <FileText className="w-3 h-3 mr-1" />
+                View Document
+              </a>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

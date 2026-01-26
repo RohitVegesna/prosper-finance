@@ -1,6 +1,6 @@
-# Prosper App Deployment Guide
+# Chronicle App Deployment Guide
 
-This guide will help you deploy your Prosper app to Vercel with both frontend and backend.
+This guide will help you deploy your Chronicle app to Vercel with both frontend and backend.
 
 ## Prerequisites
 

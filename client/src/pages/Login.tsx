@@ -61,7 +61,7 @@ export default function Login() {
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2 text-primary">
               <ShieldCheck className="w-8 h-8" />
-              <span className="text-2xl font-bold">Prosper</span>
+              <span className="text-2xl font-bold">Chronicle</span>
             </div>
           </div>
           <CardTitle>Welcome back</CardTitle>
