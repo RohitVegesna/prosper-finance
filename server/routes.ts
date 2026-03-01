@@ -360,31 +360,72 @@ export async function registerRoutes(
       console.log('Raw policies:', JSON.stringify(policies, null, 2));
       console.log('Raw investments:', JSON.stringify(investments, null, 2));
 
-      // Analytics: Investments by Type
-      const investmentsByType = investments.map(inv => ({
-        type: inv.type || 'Unknown',
-        value: parseFloat(inv.currentValue || '0'),
-        count: 1
-      }));
-
-      // Analytics: Investments by Platform
-      const investmentsByPlatform = investments.map(inv => ({
-        platform: inv.platform || 'Unknown',
-        value: parseFloat(inv.currentValue || '0'),
-        count: 1
-      }));
-
-      // Analytics: Premiums by Provider
-      const premiumsByProvider = policies.map(pol => {
-        console.log('Mapping policy:', pol.provider, 'currency:', pol.premiumCurrency);
-        return {
-          provider: pol.provider || 'Unknown',
-          monthlyPremium: parseFloat(pol.premium || '0') / (pol.premiumFrequency === 'yearly' ? 12 : 1),
-          yearlyPremium: parseFloat(pol.premium || '0') * (pol.premiumFrequency === 'yearly' ? 1 : 12),
-          policyCount: 1,
-          currency: pol.premiumCurrency || 'SEK'
-        };
+      // Analytics: Investments by Type (grouped and aggregated)
+      const typeMap = new Map<string, { value: number; count: number }>();
+      investments.forEach(inv => {
+        const type = inv.type || 'Unknown';
+const value = parseFloat(inv.currentValue || '0');
+        const existing = typeMap.get(type) || { value: 0, count: 0 };
+        typeMap.set(type, {
+          value: existing.value + value,
+          count: existing.count + 1
+        });
       });
+      const investmentsByType = Array.from(typeMap.entries()).map(([type, data]) => ({
+        type,
+        value: data.value,
+        count: data.count
+      }));
+
+      // Analytics: Investments by Platform (grouped and aggregated)
+      const platformMap = new Map<string, { value: number; count: number }>();
+      investments.forEach(inv => {
+        const platform = inv.platform || 'Unknown';
+        const value = parseFloat(inv.currentValue || '0');
+        const existing = platformMap.get(platform) || { value: 0, count: 0 };
+        platformMap.set(platform, {
+          value: existing.value + value,
+          count: existing.count + 1
+        });
+      });
+      const investmentsByPlatform = Array.from(platformMap.entries()).map(([platform, data]) => ({
+        platform,
+        value: data.value,
+        count: data.count
+      }));
+
+      // Analytics: Premiums by Provider (grouped by provider AND currency)
+      const providerMap = new Map<string, { provider: string; monthlyPremium: number; yearlyPremium: number; policyCount: number; currency: string }>();
+      policies.forEach(pol => {
+        console.log('Mapping policy:', pol.provider, 'currency:', pol.premiumCurrency);
+        const provider = pol.provider || 'Unknown';
+        const monthlyAmount = parseFloat(pol.premium || '0') / (pol.premiumFrequency === 'yearly' ? 12 : 1);
+        const yearlyAmount = parseFloat(pol.premium || '0') * (pol.premiumFrequency === 'yearly' ? 1 : 12);
+        const currency = pol.premiumCurrency || 'SEK';
+        
+        // Create composite key: provider + currency
+        const key = `${provider}|${currency}`;
+        
+        const existing = providerMap.get(key);
+        if (existing) {
+          providerMap.set(key, {
+            provider: provider,
+            monthlyPremium: existing.monthlyPremium + monthlyAmount,
+            yearlyPremium: existing.yearlyPremium + yearlyAmount,
+            policyCount: existing.policyCount + 1,
+            currency: currency
+          });
+        } else {
+          providerMap.set(key, {
+            provider: provider,
+            monthlyPremium: monthlyAmount,
+            yearlyPremium: yearlyAmount,
+            policyCount: 1,
+            currency: currency
+          });
+        }
+      });
+      const premiumsByProvider = Array.from(providerMap.values());
 
       // Analytics: Upcoming Renewals (simplified for now)
       const upcomingRenewals: any[] = [];
