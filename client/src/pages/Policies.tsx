@@ -302,10 +302,30 @@ export default function Policies() {
 function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void }) {
   const deleteMutation = useDeletePolicy();
   const daysToMaturity = policy.maturityDate ? differenceInDays(parseISO(policy.maturityDate), new Date()) : null;
+  const daysToRenewal = policy.nextRenewalDate ? differenceInDays(parseISO(policy.nextRenewalDate), new Date()) : null;
   
   let statusColor = "bg-green-500/10 text-green-700 border-green-200";
   let statusText = "Active";
+  let renewalBadge = null;
 
+  // Check renewal status first (takes priority for display)
+  if (daysToRenewal !== null && daysToRenewal > 0 && daysToRenewal <= 30) {
+    renewalBadge = (
+      <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs">
+        <Clock className="w-3 h-3 mr-1" />
+        Renewal in {daysToRenewal} {daysToRenewal === 1 ? 'day' : 'days'}
+      </Badge>
+    );
+  } else if (daysToRenewal !== null && daysToRenewal <= 0 && daysToRenewal > -7) {
+    renewalBadge = (
+      <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs">
+        <AlertCircle className="w-3 h-3 mr-1" />
+        Renewal overdue
+      </Badge>
+    );
+  }
+
+  // Check maturity status
   if (daysToMaturity !== null) {
     if (daysToMaturity < 0) {
       statusColor = "bg-red-500/10 text-red-700 border-red-200";
@@ -406,10 +426,13 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
 
       {/* Status */}
       <TableCell className="py-4">
-        <Badge variant="outline" className={`${statusColor} text-xs`}>
-          {daysToMaturity !== null && daysToMaturity <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
-          {statusText}
-        </Badge>
+        <div className="flex flex-col gap-1.5">
+          <Badge variant="outline" className={`${statusColor} text-xs`}>
+            {daysToMaturity !== null && daysToMaturity <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
+            {statusText}
+          </Badge>
+          {renewalBadge}
+        </div>
       </TableCell>
 
       {/* Actions */}
@@ -447,10 +470,30 @@ function PolicyTableRow({ policy, onEdit }: { policy: any, onEdit: () => void })
 function PolicyMobileCard({ policy, onEdit }: { policy: any, onEdit: () => void }) {
   const deleteMutation = useDeletePolicy();
   const daysToMaturity = policy.maturityDate ? differenceInDays(parseISO(policy.maturityDate), new Date()) : null;
+  const daysToRenewal = policy.nextRenewalDate ? differenceInDays(parseISO(policy.nextRenewalDate), new Date()) : null;
   
   let statusColor = "bg-green-500/10 text-green-700 border-green-200";
   let statusText = "Active";
+  let renewalBadge = null;
 
+  // Check renewal status first (takes priority for display)
+  if (daysToRenewal !== null && daysToRenewal > 0 && daysToRenewal <= 30) {
+    renewalBadge = (
+      <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs">
+        <Clock className="w-3 h-3 mr-1" />
+        Renewal in {daysToRenewal} {daysToRenewal === 1 ? 'day' : 'days'}
+      </Badge>
+    );
+  } else if (daysToRenewal !== null && daysToRenewal <= 0 && daysToRenewal > -7) {
+    renewalBadge = (
+      <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs">
+        <AlertCircle className="w-3 h-3 mr-1" />
+        Renewal overdue
+      </Badge>
+    );
+  }
+
+  // Check maturity status
   if (daysToMaturity !== null) {
     if (daysToMaturity < 0) {
       statusColor = "bg-red-500/10 text-red-700 border-red-200";
@@ -475,10 +518,13 @@ function PolicyMobileCard({ policy, onEdit }: { policy: any, onEdit: () => void 
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={`${statusColor} text-xs`}>
-              {daysToMaturity !== null && daysToMaturity <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
-              {statusText}
-            </Badge>
+            <div className="flex flex-col gap-1.5 items-end">
+              <Badge variant="outline" className={`${statusColor} text-xs`}>
+                {daysToMaturity !== null && daysToMaturity <= 60 && <AlertCircle className="w-3 h-3 mr-1" />}
+                {statusText}
+              </Badge>
+              {renewalBadge}
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
