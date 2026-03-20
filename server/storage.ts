@@ -222,18 +222,21 @@ export class DatabaseStorage implements IStorage {
     let needsRenewal = 0;
 
     for (const p of policiesList) {
-      // Check renewal dates (next renewal date within 60 days)
+      // Skip already-matured/inactive policies
+      if (p.status && p.status.toLowerCase() === 'matured') continue;
+
+      // Check renewal dates within 60 days (must be in the future)
       if (p.nextRenewalDate) {
         const renewal = new Date(p.nextRenewalDate);
-        if (renewal <= sixtyDaysFromNow) {
+        if (renewal > now && renewal <= sixtyDaysFromNow) {
           needsRenewal++;
         }
       }
-      
-      // Check maturity dates (policies maturing within 60 days)
+
+      // Check maturity dates within 60 days (must be in the future)
       if (p.maturityDate) {
         const maturity = new Date(p.maturityDate);
-        if (maturity <= sixtyDaysFromNow && maturity > now) {
+        if (maturity > now && maturity <= sixtyDaysFromNow) {
           expiringSoon++;
         }
       }
