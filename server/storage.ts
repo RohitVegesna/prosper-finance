@@ -143,7 +143,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPolicy(policy: InsertPolicy): Promise<Policy> {
-    const [newPolicy] = await db.insert(policies).values(policy).returning();
+    const [newPolicy] = await db.insert(policies).values(policy as any).returning();
     return newPolicy;
   }
 
@@ -213,8 +213,8 @@ export class DatabaseStorage implements IStorage {
     };
   }> {
     const now = new Date();
-    const sixtyDaysFromNow = new Date();
-    sixtyDaysFromNow.setDate(now.getDate() + 60);
+    const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const policiesList = await this.getPolicies(tenantId);
     
@@ -222,21 +222,29 @@ export class DatabaseStorage implements IStorage {
     let needsRenewal = 0;
 
     for (const p of policiesList) {
-      // Skip already-matured/inactive policies
-      if (p.status && p.status.toLowerCase() === 'matured') continue;
-
-      // Check renewal dates within 60 days (must be in the future)
-      if (p.nextRenewalDate) {
-        const renewal = new Date(p.nextRenewalDate);
-        if (renewal > now && renewal <= sixtyDaysFromNow) {
-          needsRenewal++;
-        }
+      // Skip policies that have already matured (past maturityDate with no future renewal)
+      if (p.maturityDate && !p.nextRenewalDate) {
+        const maturity = new Date(p.maturityDate);
+        if (maturity <= now) continue;
       }
 
-      // Check maturity dates within 60 days (must be in the future)
+      // Use nextRenewalDate as the primary signal
+      if (p.nextRenewalDate) {
+        const renewal = new Date(p.nextRenewalDate);
+        if (renewal > now && renewal <= thirtyDaysFromNow) {
+          needsRenewal++;
+        } else if (renewal > thirtyDaysFromNow && renewal <= sixtyDaysFromNow) {
+          expiringSoon++;
+        }
+        continue; // Don't double-count via maturityDate
+      }
+
+      // Fallback: check maturityDate if no renewalDate
       if (p.maturityDate) {
         const maturity = new Date(p.maturityDate);
-        if (maturity > now && maturity <= sixtyDaysFromNow) {
+        if (maturity > now && maturity <= thirtyDaysFromNow) {
+          needsRenewal++;
+        } else if (maturity > thirtyDaysFromNow && maturity <= sixtyDaysFromNow) {
           expiringSoon++;
         }
       }
