@@ -347,11 +347,11 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       req.session.user = {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        tenantId: user.tenantId,
-        domain: tenant.domain,
+        firstName: user.firstName ?? undefined,
+        lastName: user.lastName ?? undefined,
+        role: user.role ?? undefined,
+        tenantId: user.tenantId ?? undefined,
+        domain: tenant.domain ?? undefined,
       };
 
       res.status(201).json({ 
@@ -395,11 +395,11 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       req.session.user = {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        tenantId: user.tenantId,
-        domain: tenant?.domain || null,
+        firstName: user.firstName ?? undefined,
+        lastName: user.lastName ?? undefined,
+        role: user.role ?? undefined,
+        tenantId: user.tenantId ?? undefined,
+        domain: tenant?.domain ?? undefined,
       };
 
       res.json({
@@ -610,7 +610,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
           }
         } else {
           // Development: Save to local disk
-          const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId);
+          const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId!);
           const fileDir = path.join(tenantDir, uniqueFileId);
           
           if (!fs.existsSync(fileDir)) {
@@ -692,7 +692,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const policy = await storage.getPolicy(parseInt(req.params.id));
+      const policy = await storage.getPolicy(parseInt(req.params.id as string));
       if (!policy || policy.tenantId !== req.session.user.tenantId) {
         return res.status(404).json({ message: "Policy not found" });
       }
@@ -761,7 +761,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         ...req.body,
         documentUrl: documentUrl // Use new blob URL or keep existing one
       });
-      const updatedPolicy = await storage.updatePolicy(parseInt(req.params.id), sanitizedData);
+      const updatedPolicy = await storage.updatePolicy(parseInt(req.params.id as string), sanitizedData);
       res.json(updatedPolicy);
     } catch (err) {
       console.error("Update policy error:", err);
@@ -934,22 +934,38 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
 
       // Calculate policy metrics
       const totalPolicies = policies.length;
-      let expiringSoon = 0; // 30-60 days
-      let needsRenewal = 0; // < 30 days or expired
+      let expiringSoon = 0; // 31-60 days
+      let needsRenewal = 0; // <= 30 days
       
       const now = new Date();
-      
+      const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
       policies.forEach(policy => {
+        // Skip policies that have already matured
         if (policy.maturityDate) {
           const maturityDate = new Date(policy.maturityDate);
-          const daysToMaturity = Math.ceil((maturityDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (daysToMaturity < 0) {
-            needsRenewal++; // Already expired
-          } else if (daysToMaturity <= 30) {
-            needsRenewal++; // Expiring within 30 days
-          } else if (daysToMaturity <= 60) {
-            expiringSoon++; // Expiring within 31-60 days
+          if (maturityDate <= now && !policy.nextRenewalDate) return;
+        }
+
+        // Use nextRenewalDate as the primary signal for upcoming dues
+        if (policy.nextRenewalDate) {
+          const renewalDate = new Date(policy.nextRenewalDate);
+          if (renewalDate > now && renewalDate <= thirtyDaysFromNow) {
+            needsRenewal++;
+          } else if (renewalDate > thirtyDaysFromNow && renewalDate <= sixtyDaysFromNow) {
+            expiringSoon++;
+          }
+          return; // Don't double-count via maturityDate
+        }
+
+        // Fallback: check maturityDate if no renewalDate (e.g. term policies with no renewal)
+        if (policy.maturityDate) {
+          const maturityDate = new Date(policy.maturityDate);
+          if (maturityDate > now && maturityDate <= thirtyDaysFromNow) {
+            needsRenewal++;
+          } else if (maturityDate > thirtyDaysFromNow && maturityDate <= sixtyDaysFromNow) {
+            expiringSoon++;
           }
         }
       });
@@ -1030,7 +1046,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
       });
 
       // Analytics: Upcoming Renewals (simplified for now)
-      const upcomingRenewals = [];
+      const upcomingRenewals: never[] = [];
 
       const analyticsData = {
         investmentsByType,
@@ -1238,7 +1254,7 @@ const registerSimpleAuthRoutes = async (app: express.Express) => {
         }
       } else {
         // Development: Save to local disk with unique file identifiers
-        const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId);
+        const tenantDir = path.join(process.cwd(), 'uploads', req.session.user.tenantId!);
         const fileDir = path.join(tenantDir, uniqueFileId);
         
         // Create file directory if it doesn't exist
